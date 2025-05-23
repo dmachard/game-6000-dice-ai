@@ -6,7 +6,6 @@ A simple CLI dice game where a human competes against an AI to reach 6000 points
 
 - Roll 6 dice and collect points based on combinations
 - Human vs AI
-- AI strategy coded for risk-taking and defense
 
 ## 🧠 Rules Summary
 

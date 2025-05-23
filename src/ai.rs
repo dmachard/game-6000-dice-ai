@@ -1,4 +1,5 @@
 use crate::score::{calculate_score, roll_dice};
+use colored::*;
 use reqwest::blocking::Client;
 use serde_json::json;
 use std::env;
@@ -6,40 +7,49 @@ use std::env;
 const NUM_DICE: usize = 6;
 
 pub fn ai_turn(ai_score: u32, human_score: u32) -> u32 {
-    println!("--- AI Turn ---");
+    println!("{}", "AI Turn".bold().blue());
     let mut dice = NUM_DICE;
     let mut turn_score = 0;
-    let mut turn_count = 1;
+    let mut roll_count = 1;
 
     loop {
-        println!("\n\t--- AI TURN {} | SCORE: {} ---", turn_count, turn_score);
+        println!(
+            "{} {}",
+            "\tRoll number:".bold().green(),
+            roll_count
+        );
+
         let roll = roll_dice(dice);
-        println!("\tAI rolled: {:?}", roll);
+        println!("{} {:?}", "\tAI rolled:".bold().green(), roll);
 
         let (score, remaining_dice) = calculate_score(&roll);
-        println!("\tAI score this roll: {}", score);
+        println!("{} {}", "\tAI score this roll:".bold().cyan(), score);
 
         if score == 0 {
-            println!("\tAI scored nothing. End of turn.\n");
+            println!("{}", "\tAI scored nothing. End of turn.\n".bold().red());
             return 0;
         }
 
         turn_score += score;
-        turn_count += 1;
+        roll_count += 1;
 
         if remaining_dice == 0 {
-            println!("\tAI gets another full roll!");
+            println!("{}", "\tAI gets another full roll!".bold().magenta());
             continue;
         }
 
         let prompt = build_prompt(ai_score, human_score, turn_score, remaining_dice, score);
         let (decision, explanation) = ai_decision_with_chatgpt(&prompt);
 
-        println!("\tAI decision: {}", decision);
-        println!("\tReason: {}", explanation);
+        println!(
+            "{} {}",
+            "\tAI decision:".bold().blue(),
+            decision.bold().white()
+        );
+        println!("{} {}", "\tReason:".bold().green(), explanation);
 
         if decision.trim().eq_ignore_ascii_case("T") {
-            println!("\tAI banks its points.\n");
+            println!("{}", "\tAI banks its points.\n".bold().green());
             break;
         } else {
             dice = remaining_dice as usize;
