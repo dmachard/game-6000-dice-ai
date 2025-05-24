@@ -1,6 +1,6 @@
 use crate::score::{calculate_score, roll_dice};
 use colored::*;
-use std::io;
+use std::io::{self, Write};
 
 const NUM_DICE: usize = 6;
 
@@ -11,11 +11,7 @@ pub fn human_turn() -> u32 {
     let mut roll_count = 1;
 
     loop {
-        println!(
-            "{} {}",
-            "\tRoll number:".bold().green(),
-            roll_count
-        );
+        println!("{} {}", "\n\tRoll number:".bold().green(), roll_count);
 
         let roll = roll_dice(dice);
         println!("{} {:?}", "\tYou rolled:".bold().green(), roll);
@@ -24,7 +20,8 @@ pub fn human_turn() -> u32 {
         println!("{} +{}", "\tScore:".bold().cyan(), score);
 
         if score == 0 {
-            println!("{}", "\tNo points! You lose the turn.\n".bold().red());
+            println!("{}", "\tNo points! You lose the turn. Press Enter to continue...\n".bold().red());
+            std::io::stdin().read_line(&mut String::new()).unwrap();
             return 0;
         }
 
@@ -40,13 +37,13 @@ pub fn human_turn() -> u32 {
         }
 
         println!("{} {}", "\tRemaining dice:".bold().blue(), remaining_dice);
-        println!("{}", "\t(T)ake points or (R)oll again?".bold().white());
+        print!("{}", "\t(T)ake points or (R)oll again? ".bold().white());
+        io::stdout().flush().unwrap();
 
         let mut choice = String::new();
         io::stdin().read_line(&mut choice).unwrap();
 
         if choice.trim().eq_ignore_ascii_case("T") {
-            println!("{}", "\tYou banked your points.\n".bold().green());
             break;
         } else {
             dice = remaining_dice as usize;

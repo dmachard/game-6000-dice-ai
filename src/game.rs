@@ -10,7 +10,7 @@ pub fn start_game() {
     let mut ai_score = 0;
     let mut turn_number = 1;
 
-    let mut scores = vec![("Human", 0), ("AI", 0)];
+    let mut scores = [("Human", 0), ("AI", 0)];
 
     loop {
         clear_screen();

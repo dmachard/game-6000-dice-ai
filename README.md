@@ -6,6 +6,7 @@ A simple CLI dice game where a human competes against an AI to reach 6000 points
 
 - Roll 6 dice and collect points based on combinations
 - Human vs AI
+- The AI decision-making is powered by **OpenAI's GPT-4** via API
 
 ## 🧠 Rules Summary
 
@@ -18,8 +19,23 @@ A simple CLI dice game where a human competes against an AI to reach 6000 points
 - **Each 5:** 50 points
 - **No points:** Lose your turn's accumulated score
 
+## 📸 Screenshots
+
+Below are some screenshots of the game in action:
+
+![Human Turn](screenshots/cli_gameplay_human.png)
+![AI Turn](screenshots/cli_gameplay_ai.png)
 
 ## 🔧 Setup
 
-export OPENAI_API_KEY=your_key_here
+Make sure you have a valid OpenAI API key:
 
+```bash
+export OPENAI_API_KEY=your_key_here
+```
+
+## 🚀 Start game
+
+```bash
+cargo run start
+```bash
