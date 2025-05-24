@@ -1,12 +1,13 @@
-# 🎲 6000 Dice Game (Rust)
+# 🎲 6000 Dice Game
 
-A simple CLI dice game where a human competes against an AI to reach 6000 points.
+A simple CLI dice game where a human competes against AI to reach 6000 points.
 
 ## ✨ Features
 
 - Roll 6 dice and collect points based on combinations
-- Human vs AI
-- The AI decision-making is powered by **OpenAI's GPT-4** via API
+- Human vs tho AIs
+- The first AI decision-making is powered by **OpenAI's GPT-4** via API
+- The second AI decision-making is powered by **Anthropic Claude 4** via API
 
 ## 🧠 Rules Summary
 
@@ -23,19 +24,30 @@ A simple CLI dice game where a human competes against an AI to reach 6000 points
 
 Below are some screenshots of the game in action:
 
-![Human Turn](screenshots/cli_gameplay_human_v0.png)
+![AI Turn](screenshots/cli_gameplay_human_v1.png)
 ![AI Turn](screenshots/cli_gameplay_ai_v0.png)
+![AI Turn](screenshots/cli_human_win.png)
 
 ## 🔧 Setup
 
-Make sure you have a valid OpenAI API key:
+You must provide at least one valid API key to enable AI gameplay.
+
+To use OpenAI's GPT-4, set your API key:
 
 ```bash
 export OPENAI_API_KEY=your_key_here
 ```
 
+To use Anthropic Claude 4, set your API key:
+
+```bash
+export ANTHROPIC_API_KEY=your_key_here
+```
+
+You can configure one or both. The game will use the corresponding AI(s) based on the keys provided.
+
 ## 🚀 Start game
 
 ```bash
-cargo run start
+cargo run play
 ```

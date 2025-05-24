@@ -7,11 +7,23 @@ use textwrap::wrap;
 
 const NUM_DICE: usize = 6;
 
-pub fn ai_turn(ai_score: u32, human_score: u32) -> u32 {
-    println!("{}", "AI Turn".bold().blue());
+#[derive(Debug)]
+struct AIDecisionLog {
+    roll_number: usize,
+    roll: Vec<u8>,
+    turn_score: u32,
+    decision: String,
+    explanation: String,
+}
+
+pub fn ai_turn(ai_score: u32, other_scores: &[u32], ai_type: &Option<String>) -> u32 {
+    let ai_type_name = ai_type.as_ref().map(|s| s.as_str()).unwrap_or("Generic");
+    println!("{}", format!("AI Turn ({})", ai_type_name).bold().blue());
+
     let mut dice = NUM_DICE;
     let mut turn_score = 0;
     let mut roll_count = 1;
+    let mut history = Vec::new();
 
     loop {
         println!("{} {}", "\n\tRoll number:".bold().green(), roll_count);
@@ -36,8 +48,30 @@ pub fn ai_turn(ai_score: u32, human_score: u32) -> u32 {
             continue;
         }
 
-        let prompt = build_prompt(ai_score, human_score, turn_score, remaining_dice, score);
-        let (decision, explanation) = ai_decision_with_chatgpt(&prompt);
+        let prompt = build_prompt(
+            ai_score,
+            other_scores,
+            turn_score,
+            remaining_dice,
+            score,
+            &history,
+        );
+        let (decision, explanation) = match ai_type {
+            Some(ai_type_str) => match ai_type_str.as_str() {
+                "openai" => ai_decision_with_chatgpt(&prompt),
+                "anthropic" => ai_decision_with_claude(&prompt),
+                _ => ai_decision_with_claude(&prompt), // Fallback to Claude
+            },
+            None => ai_decision_with_claude(&prompt), // Default fallback
+        };
+
+        history.push(AIDecisionLog {
+            roll_number: roll_count - 1,
+            roll: roll.clone(),
+            turn_score,
+            decision: decision.clone(),
+            explanation: explanation.clone(),
+        });
 
         let wrapped_explanation = wrap(&explanation, 80);
         let max_lines = 3;
@@ -54,7 +88,6 @@ pub fn ai_turn(ai_score: u32, human_score: u32) -> u32 {
         if wrapped_explanation.len() > max_lines {
             println!("\t  [...]");
         }
-        //println!("{} {}", "\tReason:".bold().green(), explanation);
 
         if decision.trim().eq_ignore_ascii_case("T") {
             println!("{}", "\tAI banks its points.\n".bold().green());
@@ -67,13 +100,40 @@ pub fn ai_turn(ai_score: u32, human_score: u32) -> u32 {
     turn_score
 }
 
+fn format_history(history: &[AIDecisionLog]) -> String {
+    if history.is_empty() {
+        return String::from("No prior AI decisions.");
+    }
+
+    let mut formatted = String::from("History of AI decisions:\n");
+
+    for entry in history {
+        formatted.push_str(&format!(
+            "- Roll {}: rolled {:?}, turn_score={}, decision={}, explanation={}\n",
+            entry.roll_number, entry.roll, entry.turn_score, entry.decision, entry.explanation
+        ));
+    }
+
+    formatted
+}
+
 fn build_prompt(
     ai_score: u32,
-    human_score: u32,
+    other_scores: &[u32],
     turn_score: u32,
     remaining_dice: u32,
     score: u32,
+    history: &[AIDecisionLog],
 ) -> String {
+    let history_str = format_history(history);
+
+    let other_scores_str = other_scores
+        .iter()
+        .enumerate()
+        .map(|(i, score)| format!("Player {}: {}", i + 1, score))
+        .collect::<Vec<_>>()
+        .join(", ");
+
     format!(
         "You are the AI playing the 6000 dice game. Follow these rules exactly:\n\
         - Straight (1-2-3-4-5-6): 2000 points, all dice used.\n\
@@ -93,9 +153,17 @@ fn build_prompt(
         - If ahead, be cautious but reroll if a big score is likely (>600).\n\
         - Never combine dice from previous rolls.\n\
         \n\
+        You must also take into account your **past decisions** during this turn.\n\
+        Analyze whether they were successful or not, and adapt your strategy accordingly:\n\
+        - If past rerolls failed, consider being more conservative.\n\
+        - If past rerolls succeeded and risk paid off, you may consider staying bold.\n\
+        - Learn from your past choices in this turn to improve your next move.\n\
+        \n\
+        {history_str}\n\
+        \n\
         Current situation:\n\
         - AI score: {ai_score}\n\
-        - Human score: {human_score}\n\
+        - Other players' scores: {other_scores_str}\n\
         - Turn score: {turn_score}\n\
         - Dice remaining: {remaining_dice}\n\
         - Roll score: {score}\n\
@@ -139,6 +207,49 @@ fn ai_decision_with_chatgpt(prompt: &str) -> (String, String) {
 
     let content = &json_resp["choices"][0]["message"]["content"];
     let parsed: serde_json::Value = serde_json::from_str(content.as_str().unwrap_or("")).unwrap();
+
+    (
+        parsed["decision"].as_str().unwrap_or("T").to_string(),
+        parsed["explanation"].as_str().unwrap_or("").to_string(),
+    )
+}
+
+fn ai_decision_with_claude(prompt: &str) -> (String, String) {
+    let api_key = env::var("ANTHROPIC_API_KEY").expect("ANTHROPIC_API_KEY not set");
+    let client = Client::new();
+
+    let request_body = json!({
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 1024,
+        "temperature": 0.7,
+        "system": "You are the AI for the 6000 dice game. Answer in JSON format with keys: 'decision' and 'explanation'.",
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    });
+
+    let resp = client
+        .post("https://api.anthropic.com/v1/messages")
+        .header("x-api-key", api_key)
+        .header("anthropic-version", "2023-06-01")
+        .json(&request_body)
+        .send()
+        .expect("Request failed");
+
+    let json_resp: serde_json::Value = resp.json().expect("Invalid JSON");
+
+    let content = &json_resp["content"][0]["text"];
+    let parsed: serde_json::Value = serde_json::from_str(content.as_str().unwrap_or(""))
+        .unwrap_or_else(|_| {
+            eprintln!("Failed to parse AI response as JSON: {:?}", content);
+            json!({
+                "decision": "T",
+                "explanation": "Could not parse response"
+            })
+        });
 
     (
         parsed["decision"].as_str().unwrap_or("T").to_string(),

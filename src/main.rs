@@ -3,19 +3,24 @@ use dice6000::game::start_game;
 use std::env;
 
 fn main() {
-    if env::var("OPENAI_API_KEY").is_err() {
+    let openai_key = env::var("OPENAI_API_KEY").is_ok();
+    let anthropic_key = env::var("ANTHROPIC_API_KEY").is_ok();
+
+    if !openai_key && !anthropic_key {
         println!(
             "{}",
-            "Error: The environment variable OPENAI_API_KEY is not set."
+            "Error: Neither OPENAI_API_KEY nor ANTHROPIC_API_KEY environment variables are set."
                 .bold()
                 .red()
         );
         println!(
             "{}",
-            "Please set it before running the game (e.g., export OPENAI_API_KEY=your_key)."
+            "Please set at least one API key before running the game:"
                 .bold()
                 .yellow()
         );
+        println!("  export OPENAI_API_KEY=your_openai_key");
+        println!("  export ANTHROPIC_API_KEY=your_anthropic_key");
         return;
     }
 
@@ -25,7 +30,7 @@ fn main() {
         println!("Usage: {} <command>", args[0]);
         println!("Commands:");
         println!("  rules   - Display the game rules");
-        println!("  start   - Start the game");
+        println!("  play   - Start the game");
         return;
     }
 
@@ -33,9 +38,29 @@ fn main() {
         "rules" => {
             display_rules();
         }
-        "start" => {
+        "play" => {
             println!("Welcome to the 6000 Dice Game!");
-            start_game();
+
+            // number of playser
+            let ai_player_count = if openai_key && anthropic_key {
+                println!(
+                    "{}",
+                    "Both API keys detected - Starting game with 1 human + 2 AI players!"
+                        .bold()
+                        .green()
+                );
+                3
+            } else {
+                println!(
+                    "{}",
+                    "One API key detected - Starting game with 1 human + 1 AI player!"
+                        .bold()
+                        .blue()
+                );
+                2
+            };
+
+            start_game(ai_player_count, openai_key, anthropic_key);
         }
         _ => {
             println!("Unknown command: {}", args[1]);
