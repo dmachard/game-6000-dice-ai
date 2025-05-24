@@ -23,8 +23,8 @@ A simple CLI dice game where a human competes against an AI to reach 6000 points
 
 Below are some screenshots of the game in action:
 
-![Human Turn](screenshots/cli_gameplay_human.png)
-![AI Turn](screenshots/cli_gameplay_ai.png)
+![Human Turn](screenshots/cli_gameplay_human_v0.png)
+![AI Turn](screenshots/cli_gameplay_ai_v0.png)
 
 ## 🔧 Setup
 
@@ -38,4 +38,4 @@ export OPENAI_API_KEY=your_key_here
 
 ```bash
 cargo run start
-```bash
+```
