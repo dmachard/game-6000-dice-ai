@@ -20,7 +20,12 @@ pub fn human_turn() -> u32 {
         println!("{} +{}", "\tScore:".bold().cyan(), score);
 
         if score == 0 {
-            println!("{}", "\tNo points! You lose the turn. Press Enter to continue...\n".bold().red());
+            println!(
+                "{}",
+                "\tNo points! You lose the turn. Press Enter to continue...\n"
+                    .bold()
+                    .red()
+            );
             std::io::stdin().read_line(&mut String::new()).unwrap();
             return 0;
         }
