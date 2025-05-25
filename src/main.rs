@@ -6,11 +6,11 @@ use dice6000::game::start_game;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     // Parse command line arguments to find config path
     let mut config_path = "config.yaml".to_string(); // default path
     let mut command_args = Vec::new();
-    
+
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -19,7 +19,12 @@ fn main() {
                     config_path = args[i + 1].clone();
                     i += 2; // skip both the flag and the value
                 } else {
-                    println!("{}", "Error: --config option requires a path argument".bold().red());
+                    println!(
+                        "{}",
+                        "Error: --config option requires a path argument"
+                            .bold()
+                            .red()
+                    );
                     print_usage(&args[0]);
                     return;
                 }
@@ -30,7 +35,7 @@ fn main() {
             }
         }
     }
-    
+
     // Load configuration with the specified path
     let config = Config::load(&config_path).unwrap_or_else(|e| {
         println!(
