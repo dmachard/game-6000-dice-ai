@@ -23,7 +23,9 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
         for i in 0..players.len() {
             println!(
                 "{}",
-                format!("--- {} is playing ---", players[i].name).bold().cyan()
+                format!("--- {} is playing ---", players[i].name)
+                    .bold()
+                    .cyan()
             );
 
             let turn_score = if players[i].is_human {
@@ -155,7 +157,10 @@ pub fn setup_players(player_count: u8, has_openai: bool, has_anthropic: bool) ->
             });
         }
         _ => {
-            println!("Info: Unsupported player count ({}). Only human player will be added.", player_count);
+            println!(
+                "Info: Unsupported player count ({}). Only human player will be added.",
+                player_count
+            );
             // No AI added
         }
     }
