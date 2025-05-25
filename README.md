@@ -6,8 +6,7 @@ A simple CLI dice game where a human competes against AI to reach 6000 points.
 
 - Roll 6 dice and collect points based on combinations
 - Human vs tho AIs
-- The first AI decision-making is powered by **OpenAI's GPT-4** via API
-- The second AI decision-making is powered by **Anthropic Claude 4** via API
+- Play against two powerful AIs: OpenAI GPT-4 and Claude 4 by Anthropic
 
 ## 🧠 Rules Summary
 
