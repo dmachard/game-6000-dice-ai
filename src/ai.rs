@@ -1,4 +1,6 @@
+use crate::config::Config;
 use crate::score::{calculate_score, roll_dice};
+
 use colored::*;
 use reqwest::blocking::Client;
 use serde_json::json;
@@ -16,7 +18,12 @@ struct AIDecisionLog {
     explanation: String,
 }
 
-pub fn ai_turn(ai_score: u32, other_scores: &[u32], ai_type: &Option<String>) -> u32 {
+pub fn ai_turn(
+    ai_score: u32,
+    other_scores: &[u32],
+    ai_type: &Option<String>,
+    config: &Config,
+) -> u32 {
     let mut dice = NUM_DICE;
     let mut turn_score = 0;
     let mut roll_count = 1;
@@ -55,11 +62,11 @@ pub fn ai_turn(ai_score: u32, other_scores: &[u32], ai_type: &Option<String>) ->
         );
         let (decision, explanation) = match ai_type {
             Some(ai_type_str) => match ai_type_str.as_str() {
-                "openai" => ai_decision_with_chatgpt(&prompt),
-                "anthropic" => ai_decision_with_claude(&prompt),
-                _ => ai_decision_with_claude(&prompt), // Fallback to Claude
+                "openai" => ai_decision_with_chatgpt(&prompt, config),
+                "anthropic" => ai_decision_with_claude(&prompt, config),
+                _ => ai_decision_with_claude(&prompt, config), // Fallback to Claude
             },
-            None => ai_decision_with_claude(&prompt), // Default fallback
+            None => ai_decision_with_claude(&prompt, config), // Default fallback
         };
 
         history.push(AIDecisionLog {
@@ -181,12 +188,12 @@ fn build_prompt(
     )
 }
 
-fn ai_decision_with_chatgpt(prompt: &str) -> (String, String) {
+fn ai_decision_with_chatgpt(prompt: &str, config: &Config) -> (String, String) {
     let api_key = env::var("OPENAI_API_KEY").expect("OPENAI_API_KEY not set");
     let client = Client::new();
 
     let request_body = json!({
-        "model": "gpt-4",
+        "model": config.openai.model,
         "messages": [
             { "role": "system", "content": "You are the AI for the 6000 dice game." },
             { "role": "user", "content": prompt }
@@ -194,7 +201,7 @@ fn ai_decision_with_chatgpt(prompt: &str) -> (String, String) {
     });
 
     let resp = client
-        .post("https://api.openai.com/v1/chat/completions")
+        .post(&config.openai.url)
         .bearer_auth(api_key)
         .json(&request_body)
         .send()
@@ -211,12 +218,12 @@ fn ai_decision_with_chatgpt(prompt: &str) -> (String, String) {
     )
 }
 
-fn ai_decision_with_claude(prompt: &str) -> (String, String) {
+fn ai_decision_with_claude(prompt: &str, config: &Config) -> (String, String) {
     let api_key = env::var("ANTHROPIC_API_KEY").expect("ANTHROPIC_API_KEY not set");
     let client = Client::new();
 
     let request_body = json!({
-        "model": "claude-sonnet-4-20250514",
+        "model": config.anthropic.model,
         "max_tokens": 1024,
         "temperature": 0.7,
         "system": "You are the AI for the 6000 dice game. Answer in JSON format with keys: 'decision' and 'explanation'.",
@@ -229,7 +236,7 @@ fn ai_decision_with_claude(prompt: &str) -> (String, String) {
     });
 
     let resp = client
-        .post("https://api.anthropic.com/v1/messages")
+        .post(&config.anthropic.url)
         .header("x-api-key", api_key)
         .header("anthropic-version", "2023-06-01")
         .json(&request_body)

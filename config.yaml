@@ -1,0 +1,13 @@
+# 6000 Dice Game Configuration
+game:
+  human_player_name: "Human"
+
+# Configuration OpenAI
+openai:
+  url: "https://api.openai.com/v1/chat/completions"
+  model: "gpt-4"
+  
+# Configuration Anthropic
+anthropic:
+  url: "https://api.anthropic.com/v1/messages"
+  model: "claude-sonnet-4-20250514"

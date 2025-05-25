@@ -1,5 +1,7 @@
 use crate::ai::ai_turn;
+use crate::config::Config;
 use crate::human::human_turn;
+
 use colored::Colorize;
 use std::process::Command;
 
@@ -12,8 +14,8 @@ pub struct Player {
     pub ai_type: Option<String>, // "openai" or "anthropic"
 }
 
-pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
-    let mut players = setup_players(ai_player_count, has_openai, has_anthropic);
+pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool, config: &Config) {
+    let mut players = setup_players(ai_player_count, has_openai, has_anthropic, config);
     let mut turn_number = 1;
 
     loop {
@@ -38,7 +40,7 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
                     .map(|(_, p)| p.score)
                     .collect();
 
-                ai_turn(players[i].score, &other_scores, &players[i].ai_type)
+                ai_turn(players[i].score, &other_scores, &players[i].ai_type, config)
             };
 
             players[i].score += turn_score;
@@ -73,44 +75,20 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
             print_summary(turn_number, &players);
         }
         turn_number += 1;
-
-        // // Human
-        // human_score += human_turn();
-        // scores[0].1 = human_score;
-        // if human_score >= WINNING_SCORE {
-        //     println!("{}", "You win!".bold().red().on_white());
-        //     break;
-        // }
-
-        // clear_screen();
-        // print_summary(turn_number, human_score, ai_score);
-
-        // // AI
-        // ai_score += ai_turn(ai_score, human_score);
-        // scores[1].1 = ai_score;
-        // if ai_score >= WINNING_SCORE {
-        //     println!("{}", "AI wins!".bold().red().on_white());
-        //     break;
-        // }
-
-        // println!(
-        //     "{}",
-        //     "AI has finished its turn. Press Enter to continue..."
-        //         .bold()
-        //         .magenta()
-        // );
-        // std::io::stdin().read_line(&mut String::new()).unwrap();
-
-        // turn_number += 1;
     }
 }
 
-pub fn setup_players(player_count: u8, has_openai: bool, has_anthropic: bool) -> Vec<Player> {
+pub fn setup_players(
+    player_count: u8,
+    has_openai: bool,
+    has_anthropic: bool,
+    config: &Config,
+) -> Vec<Player> {
     let mut players = Vec::new();
 
     // Always add human player
     players.push(Player {
-        name: "Human".to_string(),
+        name: config.game.human_player_name.clone(),
         score: 0,
         is_human: true,
         ai_type: None,

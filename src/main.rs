@@ -1,8 +1,19 @@
 use colored::*;
-use dice6000::game::start_game;
 use std::env;
 
+use dice6000::config::Config;
+use dice6000::game::start_game;
+
 fn main() {
+    // Load configuration
+    let config = Config::load("config.yaml").unwrap_or_else(|e| {
+        println!(
+            "Warning: Could not load config.yaml ({}), using defaults",
+            e
+        );
+        Config::default()
+    });
+
     let openai_key = env::var("OPENAI_API_KEY").is_ok();
     let anthropic_key = env::var("ANTHROPIC_API_KEY").is_ok();
 
@@ -29,8 +40,8 @@ fn main() {
     if args.len() < 2 {
         println!("Usage: {} <command>", args[0]);
         println!("Commands:");
-        println!("  rules   - Display the game rules");
-        println!("  play   - Start the game");
+        println!("  rules - Display the game rules");
+        println!("  play - Play the game");
         return;
     }
 
@@ -60,7 +71,7 @@ fn main() {
                 2
             };
 
-            start_game(ai_player_count, openai_key, anthropic_key);
+            start_game(ai_player_count, openai_key, anthropic_key, &config);
         }
         _ => {
             println!("Unknown command: {}", args[1]);
