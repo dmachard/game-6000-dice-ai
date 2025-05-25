@@ -33,7 +33,7 @@ impl Config {
         Ok(config)
     }
 
-    pub fn default() -> Self {
+    pub fn init() -> Self {
         Config {
             game: GameConfig {
                 human_player_name: "Human Player".to_string(),

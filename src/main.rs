@@ -42,7 +42,7 @@ fn main() {
             "Warning: Could not load {} ({}), using defaults",
             config_path, e
         );
-        Config::default()
+        Config::init()
     });
 
     let openai_key = env::var("OPENAI_API_KEY").is_ok();
