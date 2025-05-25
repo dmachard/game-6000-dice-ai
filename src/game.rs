@@ -9,17 +9,12 @@ pub struct Player {
     pub name: String,
     pub score: u32,
     pub is_human: bool,
-    pub ai_type: Option<String>, // "openai" ou "anthropic"
+    pub ai_type: Option<String>, // "openai" or "anthropic"
 }
 
 pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
     let mut players = setup_players(ai_player_count, has_openai, has_anthropic);
-
-    // let mut human_score = 0;
-    // let mut ai_score = 0;
     let mut turn_number = 1;
-
-    // let mut scores = [("Human", 0), ("AI", 0)];
 
     loop {
         clear_screen();
@@ -27,8 +22,8 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
 
         for i in 0..players.len() {
             println!(
-                "\n{}",
-                format!("--- {}'s Turn ---", players[i].name).bold().cyan()
+                "{}",
+                format!("--- {} is playing ---", players[i].name).bold().cyan()
             );
 
             let turn_score = if players[i].is_human {
@@ -108,33 +103,21 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool) {
     }
 }
 
-fn clear_screen() {
-    Command::new("clear").status().unwrap();
-}
-
-fn print_summary(turn_number: u32, players: &[Player]) {
-    println!("{}", "6000 Dice Game".bold().blue());
-    println!("{}", "==============================".blue());
-
-    let mut summary = format!("Turn: {}", turn_number);
-    for player in players {
-        summary.push_str(&format!(" | {}: {}", player.name, player.score));
-    }
-
-    println!("{}", summary.bold().yellow());
-    println!("{}", "==============================\n".blue());
-}
-
-fn setup_players(player_count: u8, has_openai: bool, has_anthropic: bool) -> Vec<Player> {
+pub fn setup_players(player_count: u8, has_openai: bool, has_anthropic: bool) -> Vec<Player> {
     let mut players = Vec::new();
 
-    // add human player
+    // Always add human player
     players.push(Player {
         name: "Human".to_string(),
         score: 0,
         is_human: true,
         ai_type: None,
     });
+
+    // If no AI options are enabled, return only the human player
+    if !has_openai && !has_anthropic {
+        return players;
+    }
 
     // add ai players
     match player_count {
@@ -172,19 +155,27 @@ fn setup_players(player_count: u8, has_openai: bool, has_anthropic: bool) -> Vec
             });
         }
         _ => {
-            // default
-            players.push(Player {
-                name: "AI".to_string(),
-                score: 0,
-                is_human: false,
-                ai_type: if has_openai {
-                    Some("openai".to_string())
-                } else {
-                    Some("anthropic".to_string())
-                },
-            });
+            println!("Info: Unsupported player count ({}). Only human player will be added.", player_count);
+            // No AI added
         }
     }
 
     players
+}
+
+fn clear_screen() {
+    Command::new("clear").status().unwrap();
+}
+
+fn print_summary(turn_number: u32, players: &[Player]) {
+    println!("{}", "6000 Dice Game".bold().blue());
+    println!("{}", "==============================".blue());
+
+    let mut summary = format!("Turn: {}", turn_number);
+    for player in players {
+        summary.push_str(&format!(" | {}: {}", player.name, player.score));
+    }
+
+    println!("{}", summary.bold().yellow());
+    println!("{}", "==============================\n".blue());
 }

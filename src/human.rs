@@ -5,7 +5,6 @@ use std::io::{self, Write};
 const NUM_DICE: usize = 6;
 
 pub fn human_turn() -> u32 {
-    println!("{}", "Human Turn".bold().blue());
     let mut dice = NUM_DICE;
     let mut turn_score = 0;
     let mut roll_count = 1;

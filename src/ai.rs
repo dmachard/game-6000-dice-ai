@@ -17,9 +17,6 @@ struct AIDecisionLog {
 }
 
 pub fn ai_turn(ai_score: u32, other_scores: &[u32], ai_type: &Option<String>) -> u32 {
-    let ai_type_name = ai_type.as_ref().map(|s| s.as_str()).unwrap_or("Generic");
-    println!("{}", format!("AI Turn ({})", ai_type_name).bold().blue());
-
     let mut dice = NUM_DICE;
     let mut turn_score = 0;
     let mut roll_count = 1;
@@ -74,7 +71,7 @@ pub fn ai_turn(ai_score: u32, other_scores: &[u32], ai_type: &Option<String>) ->
         });
 
         let wrapped_explanation = wrap(&explanation, 80);
-        let max_lines = 3;
+        let max_lines = 10;
 
         println!(
             "{} {}",
