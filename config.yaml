@@ -3,6 +3,11 @@ game:
   human_player_name: "Human"
   prompt_language: "fr"
 
+# Server Configuration
+server:
+  host: "0.0.0.0"
+  port: 3000
+  
 # Configuration OpenAI
 openai:
   url: "https://api.openai.com/v1/chat/completions"

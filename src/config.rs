@@ -3,6 +3,7 @@ use std::fs;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
+    pub server: ServerConfig,
     pub game: GameConfig,
     pub openai: OpenAIConfig,
     pub anthropic: AnthropicConfig,
@@ -12,6 +13,12 @@ pub struct Config {
 pub struct GameConfig {
     pub human_player_name: String,
     pub prompt_language: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ServerConfig {
+    pub host: String,
+    pub port: u16,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -35,6 +42,10 @@ impl Config {
 
     pub fn init() -> Self {
         Config {
+            server: ServerConfig {
+                host: "0.0.0.0".to_string(),
+                port: 3000,
+            },
             game: GameConfig {
                 human_player_name: "Human".to_string(),
                 prompt_language: "en".to_string(),

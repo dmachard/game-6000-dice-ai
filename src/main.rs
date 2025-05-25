@@ -1,6 +1,9 @@
 use colored::*;
 use std::env;
+use std::net::SocketAddr;
+use tokio::net::TcpListener;
 
+use dice6000::api;
 use dice6000::config::Config;
 use dice6000::game::start_game;
 
@@ -76,28 +79,10 @@ fn main() {
             display_rules();
         }
         "play" => {
-            println!("Welcome to the 6000 Dice Game!");
-
-            // number of playser
-            let ai_player_count = if openai_key && anthropic_key {
-                println!(
-                    "{}",
-                    "Both API keys detected - Starting game with 1 human + 2 AI players!"
-                        .bold()
-                        .green()
-                );
-                3
-            } else {
-                println!(
-                    "{}",
-                    "One API key detected - Starting game with 1 human + 1 AI player!"
-                        .bold()
-                        .blue()
-                );
-                2
-            };
-
-            start_game(ai_player_count, openai_key, anthropic_key, &config);
+            run_local_game(openai_key, anthropic_key, &config);
+        }
+        "serve" => {
+            run_server_async(&config);
         }
         _ => {
             println!("Unknown command: {}", command_args[0]);
@@ -105,6 +90,49 @@ fn main() {
         }
     }
 }
+
+fn run_local_game(openai_key: bool, anthropic_key: bool, config: &Config) {
+    println!("Starting local CLI game...");
+    println!("Welcome to the 6000 Dice Game!");
+
+    // number of playser
+    let ai_player_count = if openai_key && anthropic_key {
+        println!(
+            "{}",
+            "Both API keys detected - Starting game with 1 human + 2 AI players!"
+                .bold()
+                .green()
+        );
+        3
+    } else {
+        println!(
+            "{}",
+            "One API key detected - Starting game with 1 human + 1 AI player!"
+                .bold()
+                .blue()
+        );
+        2
+    };
+
+    start_game(ai_player_count, openai_key, anthropic_key, config);
+}
+
+#[tokio::main]
+async fn run_server_async(config: &Config) {
+    run_api_server(config).await;
+}
+
+async fn run_api_server(config: &Config) {
+    let app = api::create_router();
+
+    let addr = format!("{}:{}", config.server.host, config.server.port);
+    let socket_addr: SocketAddr = addr.parse().expect("Invalid IP or port in config");
+
+    println!("Starting API server on http://{}", socket_addr);
+    let listener = TcpListener::bind(socket_addr).await.unwrap();
+    axum::serve(listener, app).await.unwrap();
+}
+
 fn print_usage(program_name: &str) {
     println!("Usage: {} [OPTIONS] <command>", program_name);
     println!();
@@ -113,7 +141,8 @@ fn print_usage(program_name: &str) {
     println!();
     println!("Commands:");
     println!("  rules                  Display the game rules");
-    println!("  play                   Play the game");
+    println!("  play                   Play the local game");
+    println!("  serve                 Start server");
     println!();
     println!("Examples:");
     println!("  {} play", program_name);
