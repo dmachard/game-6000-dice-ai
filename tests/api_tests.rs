@@ -6,7 +6,6 @@ use axum::{
     body::Body,
     http::{Request, StatusCode},
 };
-use serde_json;
 use tower::util::ServiceExt;
 
 #[tokio::test]
