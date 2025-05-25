@@ -36,7 +36,7 @@ impl Config {
     pub fn init() -> Self {
         Config {
             game: GameConfig {
-                human_player_name: "Human Player".to_string(),
+                human_player_name: "Human".to_string(),
                 prompt_language: "en".to_string(),
             },
             openai: OpenAIConfig {
