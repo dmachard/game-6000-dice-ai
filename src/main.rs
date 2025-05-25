@@ -5,11 +5,37 @@ use dice6000::config::Config;
 use dice6000::game::start_game;
 
 fn main() {
-    // Load configuration
-    let config = Config::load("config.yaml").unwrap_or_else(|e| {
+    let args: Vec<String> = env::args().collect();
+    
+    // Parse command line arguments to find config path
+    let mut config_path = "config.yaml".to_string(); // default path
+    let mut command_args = Vec::new();
+    
+    let mut i = 1;
+    while i < args.len() {
+        match args[i].as_str() {
+            "-c" | "--config" => {
+                if i + 1 < args.len() {
+                    config_path = args[i + 1].clone();
+                    i += 2; // skip both the flag and the value
+                } else {
+                    println!("{}", "Error: --config option requires a path argument".bold().red());
+                    print_usage(&args[0]);
+                    return;
+                }
+            }
+            _ => {
+                command_args.push(args[i].clone());
+                i += 1;
+            }
+        }
+    }
+    
+    // Load configuration with the specified path
+    let config = Config::load(&config_path).unwrap_or_else(|e| {
         println!(
-            "Warning: Could not load config.yaml ({}), using defaults",
-            e
+            "Warning: Could not load {} ({}), using defaults",
+            config_path, e
         );
         Config::default()
     });
@@ -35,13 +61,8 @@ fn main() {
         return;
     }
 
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() < 2 {
-        println!("Usage: {} <command>", args[0]);
-        println!("Commands:");
-        println!("  rules - Display the game rules");
-        println!("  play - Play the game");
+    if command_args.is_empty() {
+        print_usage(&args[0]);
         return;
     }
 
@@ -74,10 +95,25 @@ fn main() {
             start_game(ai_player_count, openai_key, anthropic_key, &config);
         }
         _ => {
-            println!("Unknown command: {}", args[1]);
-            println!("Use 'rules' to display the game rules or 'start' to start the game.");
+            println!("Unknown command: {}", command_args[0]);
+            print_usage(&args[0]);
         }
     }
+}
+fn print_usage(program_name: &str) {
+    println!("Usage: {} [OPTIONS] <command>", program_name);
+    println!();
+    println!("Options:");
+    println!("  -c, --config <path>    Path to configuration file (default: config.yaml)");
+    println!();
+    println!("Commands:");
+    println!("  rules                  Display the game rules");
+    println!("  play                   Play the game");
+    println!();
+    println!("Examples:");
+    println!("  {} play", program_name);
+    println!("  {} --config my_config.yaml play", program_name);
+    println!("  {} -c /path/to/config.yaml rules", program_name);
 }
 
 fn display_rules() {
