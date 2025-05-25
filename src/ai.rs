@@ -59,6 +59,7 @@ pub fn ai_turn(
             remaining_dice,
             score,
             &history,
+            config.game.prompt_language.as_str(),
         );
         let (decision, explanation) = match ai_type {
             Some(ai_type_str) => match ai_type_str.as_str() {
@@ -128,8 +129,15 @@ fn build_prompt(
     remaining_dice: u32,
     score: u32,
     history: &[AIDecisionLog],
+    lang: &str
 ) -> String {
     let history_str = format_history(history);
+
+    let language_instruction = match lang {
+        "fr" => "french",
+        "en" => "english",
+        _ => "",
+    };
 
     let other_scores_str = other_scores
         .iter()
@@ -150,18 +158,13 @@ fn build_prompt(
         - A roll scoring 0 loses all turn points.\n\
         - Only reroll non-scoring dice.\n\
         \n\
-        Strategy (aggressive but calculated):\n\
-        - If behind, take more risks to catch up, but don't be reckless.\n\
-        - If turn score < 300, reroll cautiously, even with few dice.\n\
-        - 1 die left: reroll only if likely to get 1 or 5, otherwise take points.\n\
-        - If ahead, be cautious but reroll if a big score is likely (>600).\n\
-        - Never combine dice from previous rolls.\n\
-        \n\
-        You must also take into account your **past decisions** during this turn.\n\
-        Analyze whether they were successful or not, and adapt your strategy accordingly:\n\
-        - If past rerolls failed, consider being more conservative.\n\
-        - If past rerolls succeeded and risk paid off, you may consider staying bold.\n\
-        - Learn from your past choices in this turn to improve your next move.\n\
+        You have the basic rules and scoring system of the 6000 dice game.\n\
+        Use these rules as a foundation.\n\
+        Analyze your past decisions this turn:\n\
+        - If rerolls led to losses, become more conservative.\n\
+        - If rerolls led to gains, consider increasing risk.\n\
+        Adapt your risk-taking dynamically based on the current game state and your past experience this turn.\n\
+        Do not follow rigid thresholds but learn from your history.\n\
         \n\
         {history_str}\n\
         \n\
@@ -172,11 +175,6 @@ fn build_prompt(
         - Dice remaining: {remaining_dice}\n\
         - Roll score: {score}\n\
         \n\
-        Specific advice:\n\
-        - >3 dice: reroll to maximize score.\n\
-        - 2 dice: reroll if turn score < 300, else take points.\n\
-        - 1 die: take points unless feeling bold.\n\
-        \n\
         Respond with exact JSON format only:\n\
         {{\n\
           \"decision\": \"R\",  // \"R\" = roll again, \"T\" = take points\n\
@@ -184,7 +182,7 @@ fn build_prompt(
         }}\n\
         \n\
         Don't mention combinations not present in the roll. Be rigorous.\n\
-        Now give your answer:"
+        Now give your answer in {language_instruction}:"
     )
 }
 

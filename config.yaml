@@ -1,6 +1,7 @@
 # 6000 Dice Game Configuration
 game:
   human_player_name: "Human"
+  prompt_language: "fr"
 
 # Configuration OpenAI
 openai:
