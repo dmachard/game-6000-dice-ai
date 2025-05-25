@@ -129,7 +129,7 @@ fn build_prompt(
     remaining_dice: u32,
     score: u32,
     history: &[AIDecisionLog],
-    lang: &str
+    lang: &str,
 ) -> String {
     let history_str = format_history(history);
 
