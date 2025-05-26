@@ -42,8 +42,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: 6000dice-linux-x86_64
+            target: x86_64-unknown-linux-musl
+            artifact_name: 6000dice-linux-x86_64-musl
           - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: 6000dice-macos-x86_64
@@ -62,7 +62,7 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts
-          cp target/${{ matrix.target }}/release/$(basename ${{ github.repository }}) artifacts/${{ matrix.artifact_name }}
+          cp target/${{ matrix.target }}/release/dice6000 artifacts/${{ matrix.artifact_name }}
           chmod +x artifacts/${{ matrix.artifact_name }}
 
       - name: Upload artifacts
