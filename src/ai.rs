@@ -113,7 +113,11 @@ fn format_history(history: &[AIDecisionLog]) -> String {
     for (i, entry) in history.iter().enumerate() {
         formatted.push_str(&format!(
             "Turn={} - remaining_dice={} turn_score={}, decision={}, explanation={}\n",
-            i + 1, entry.remaining_dice, entry.turn_score, entry.decision, entry.explanation
+            i + 1,
+            entry.remaining_dice,
+            entry.turn_score,
+            entry.decision,
+            entry.explanation
         ));
     }
 
