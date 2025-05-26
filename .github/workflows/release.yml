@@ -1,4 +1,4 @@
-name: Test, Build & Release
+name: Release
 
 on:
     release:
