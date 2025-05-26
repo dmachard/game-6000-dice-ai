@@ -11,8 +11,7 @@ const NUM_DICE: usize = 6;
 
 #[derive(Debug)]
 struct AIDecisionLog {
-    roll_number: usize,
-    roll: Vec<u8>,
+    remaining_dice: u32,
     turn_score: u32,
     decision: String,
     explanation: String,
@@ -71,8 +70,7 @@ pub fn ai_turn(
         };
 
         history.push(AIDecisionLog {
-            roll_number: roll_count - 1,
-            roll: roll.clone(),
+            remaining_dice,
             turn_score,
             decision: decision.clone(),
             explanation: explanation.clone(),
@@ -112,10 +110,10 @@ fn format_history(history: &[AIDecisionLog]) -> String {
 
     let mut formatted = String::from("History of AI decisions:\n");
 
-    for entry in history {
+    for (i, entry) in history.iter().enumerate() {
         formatted.push_str(&format!(
-            "- Roll {}: rolled {:?}, turn_score={}, decision={}, explanation={}\n",
-            entry.roll_number, entry.roll, entry.turn_score, entry.decision, entry.explanation
+            "Turn={} - remaining_dice={} turn_score={}, decision={}, explanation={}\n",
+            i + 1, entry.remaining_dice, entry.turn_score, entry.decision, entry.explanation
         ));
     }
 
@@ -147,7 +145,8 @@ fn build_prompt(
         .join(", ");
 
     format!(
-        "You are the AI playing the 6000 dice game. Follow these rules exactly:\n\
+        "You are reflecting on the decisions made during this turn. Use the outcomes of each step to adjust your next move.\n\
+        You are the AI playing the 6000 dice game. Follow these rules exactly:\n\
         - Straight (1-2-3-4-5-6): 2000 points, all dice used.\n\
         - Three pairs: 1500 points, all dice used.\n\
         - Six of a kind: face value × 1000.\n\
@@ -159,12 +158,14 @@ fn build_prompt(
         - Only reroll non-scoring dice.\n\
         \n\
         You have the basic rules and scoring system of the 6000 dice game.\n\
-        Use these rules as a foundation.\n\
-        Analyze your past decisions this turn:\n\
-        - If rerolls led to losses, become more conservative.\n\
-        - If rerolls led to gains, consider increasing risk.\n\
-        Adapt your risk-taking dynamically based on the current game state and your past experience this turn.\n\
+        Use the rules and scoring system as a foundation for reasoning.\n\
+        Review the outcomes of your rerolls earlier this turn and use them to refine your risk-taking strategy.\n\
+        Continuously adapt your strategy based on the evolving game state and recent outcomes.\n\
+        Let your own experience from this turn guide your choices, not rigid rules.\n\
+        Think critically and learn from your actions to optimize future decisions.\n\
         Do not follow rigid thresholds but learn from your history.\n\
+        Each reroll is an independent event; avoid gambler’s fallacy.\n\
+        You lose the entire turn score if a reroll produces no scoring dice.\n\
         \n\
         {history_str}\n\
         \n\
@@ -174,6 +175,8 @@ fn build_prompt(
         - Turn score: {turn_score}\n\
         - Dice remaining: {remaining_dice}\n\
         - Roll score: {score}\n\
+        \n\
+        Reminder: Player 1 is always a human.\n\
         \n\
         Respond with exact JSON format only:\n\
         {{\n\
@@ -193,7 +196,7 @@ fn ai_decision_with_chatgpt(prompt: &str, config: &Config) -> (String, String) {
     let request_body = json!({
         "model": config.openai.model,
         "messages": [
-            { "role": "system", "content": "You are the AI for the 6000 dice game." },
+            { "role": "system", "content": "You are an expert and strategic AI agent playing the 6000 dice game. Your role is to analyze each turn in detail, learn from past outcomes, and make optimal decisions by reasoning through uncertainty and risk. Answer in JSON format with keys: 'decision' and 'explanation'." },
             { "role": "user", "content": prompt }
         ]
     });
@@ -224,7 +227,7 @@ fn ai_decision_with_claude(prompt: &str, config: &Config) -> (String, String) {
         "model": config.anthropic.model,
         "max_tokens": 1024,
         "temperature": 0.7,
-        "system": "You are the AI for the 6000 dice game. Answer in JSON format with keys: 'decision' and 'explanation'.",
+        "system": "You are an expert and strategic AI agent playing the 6000 dice game. Your role is to analyze each turn in detail, learn from past outcomes, and make optimal decisions by reasoning through uncertainty and risk. Answer in JSON format with keys: 'decision' and 'explanation'.",
         "messages": [
             {
                 "role": "user",
