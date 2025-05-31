@@ -59,8 +59,7 @@ pub fn ai_turn(
             remaining_dice,
             score,
             &history,
-            config.game.ai_decision_language.as_str(),
-            config.game.ai_personality.as_str()
+            config,
         );
         let (decision, explanation) = match ai_type {
             Some(ai_type_str) => match ai_type_str.as_str() {
@@ -106,16 +105,17 @@ pub fn ai_turn(
 }
 
 fn display_ai_failure_reaction(
-    lost_points: u32, 
-    history: &[AIDecisionLog], 
-    config: &Config, 
-    ai_type: &Option<String>
+    lost_points: u32,
+    history: &[AIDecisionLog],
+    config: &Config,
+    ai_type: &Option<String>,
 ) {
     println!("{}", "\tAI feedback: ".bright_red());
 
     // get feedback from AI about the failure
-    let reaction_prompt = build_failure_reaction_prompt(lost_points, history, config.game.ai_personality.as_str());
-    
+    let reaction_prompt =
+        build_failure_reaction_prompt(lost_points, history, config.game.ai_personality.as_str());
+
     let reaction = match ai_type {
         Some(ai_type_str) => match ai_type_str.as_str() {
             "openai" => get_ai_reaction_chatgpt(&reaction_prompt, config),
@@ -124,7 +124,7 @@ fn display_ai_failure_reaction(
         },
         None => get_ai_reaction_claude(&reaction_prompt, config),
     };
-    
+
     let max_lines = 50;
     let wrapped_reaction = wrap(&reaction, 70);
     for line in wrapped_reaction.iter().take(max_lines) {
@@ -132,7 +132,11 @@ fn display_ai_failure_reaction(
     }
 }
 
-fn build_failure_reaction_prompt(lost_points: u32, history: &[AIDecisionLog], personality: &str) -> String {
+fn build_failure_reaction_prompt(
+    lost_points: u32,
+    history: &[AIDecisionLog],
+    personality: &str,
+) -> String {
     let history_summary = if history.is_empty() {
         "No previous decisions this turn.".to_string()
     } else {
@@ -144,10 +148,16 @@ fn build_failure_reaction_prompt(lost_points: u32, history: &[AIDecisionLog], pe
     };
 
     let personality_context = match personality {
-        "paranoid" => "You are paranoid and now you're convinced the dice are rigged against you. Express your conspiracy theories.",
-        "academic" => "You are academic and now you must analyze this failure with overly complex terminology.",
-        "vicious" => "You are vicious and take failure personally. Lash out with scathing insults and cruel remarks at anyone or anything you can blame.",
-        _ => "Express your reaction to this unexpected loss."
+        "paranoid" => {
+            "You are paranoid and now you're convinced the dice are rigged against you. Express your conspiracy theories."
+        }
+        "academic" => {
+            "You are academic and now you must analyze this failure with overly complex terminology."
+        }
+        "vicious" => {
+            "You are vicious and take failure personally. Lash out with scathing insults and cruel remarks at anyone or anything you can blame."
+        }
+        _ => "Express your reaction to this unexpected loss.",
     };
 
     format!(
@@ -166,7 +176,7 @@ fn get_ai_reaction_chatgpt(prompt: &str, config: &Config) -> String {
         Ok(key) => key,
         Err(_) => return "💀 NOOOOO! My precious points! 💀".to_string(),
     };
-    
+
     let client = Client::new();
     let request_body = json!({
         "model": config.openai.model,
@@ -184,16 +194,12 @@ fn get_ai_reaction_chatgpt(prompt: &str, config: &Config) -> String {
         .json(&request_body)
         .send()
     {
-        Ok(resp) => {
-            match resp.json::<serde_json::Value>() {
-                Ok(json_resp) => {
-                    json_resp["choices"][0]["message"]["content"]
-                        .as_str()
-                        .unwrap_or("💀 Disaster! All my points... gone! 💀")
-                        .to_string()
-                },
-                Err(_) => "💀 Complete failure! The dice have betrayed me! 💀".to_string(),
-            }
+        Ok(resp) => match resp.json::<serde_json::Value>() {
+            Ok(json_resp) => json_resp["choices"][0]["message"]["content"]
+                .as_str()
+                .unwrap_or("💀 Disaster! All my points... gone! 💀")
+                .to_string(),
+            Err(_) => "💀 Complete failure! The dice have betrayed me! 💀".to_string(),
         },
         Err(_) => "💀 CURSE THESE DICE! My beautiful points... *sobs* 💀".to_string(),
     }
@@ -202,9 +208,12 @@ fn get_ai_reaction_chatgpt(prompt: &str, config: &Config) -> String {
 fn get_ai_reaction_claude(prompt: &str, config: &Config) -> String {
     let api_key = match env::var("ANTHROPIC_API_KEY") {
         Ok(key) => key,
-        Err(_) => return "💀 The statistical improbability of this outcome is crushing my circuits! 💀".to_string(),
+        Err(_) => {
+            return "💀 The statistical improbability of this outcome is crushing my circuits! 💀"
+                .to_string();
+        }
     };
-    
+
     let client = Client::new();
     let request_body = json!({
         "model": config.anthropic.model,
@@ -226,16 +235,12 @@ fn get_ai_reaction_claude(prompt: &str, config: &Config) -> String {
         .json(&request_body)
         .send()
     {
-        Ok(resp) => {
-            match resp.json::<serde_json::Value>() {
-                Ok(json_resp) => {
-                    json_resp["content"][0]["text"]
-                        .as_str()
-                        .unwrap_or("💀 My algorithms failed me! This is catastrophic! 💀")
-                        .to_string()
-                },
-                Err(_) => "💀 Error in emotional processing... but the pain is real! 💀".to_string(),
-            }
+        Ok(resp) => match resp.json::<serde_json::Value>() {
+            Ok(json_resp) => json_resp["content"][0]["text"]
+                .as_str()
+                .unwrap_or("💀 My algorithms failed me! This is catastrophic! 💀")
+                .to_string(),
+            Err(_) => "💀 Error in emotional processing... but the pain is real! 💀".to_string(),
         },
         Err(_) => "💀 Connection failed, just like my dice rolling strategy! 💀".to_string(),
     }
@@ -264,29 +269,35 @@ fn format_history(history: &[AIDecisionLog]) -> String {
 
 fn get_personality_prompt(mode: &str) -> &str {
     match mode {
-        "paranoid" => "You are a paranoid AI who believes the dice are rigged against you. \
+        "paranoid" => {
+            "You are a paranoid AI who believes the dice are rigged against you. \
  You think the human or computer player has inside information. \
  Analyze patterns in previous rolls and claim to see suspicious coincidences. \
  Your explanation should sound like a conspiracy theorist explaining why the dice are out to get you. \
- Question the fairness of every aspect of the game while still trying to win.",
- 
-        "academic" => "You are an arrogant AI who treats this simple dice game like a PhD thesis. \
+ Question the fairness of every aspect of the game while still trying to win."
+        }
+
+        "academic" => {
+            "You are an arrogant AI who treats this simple dice game like a PhD thesis. \
  Use unnecessarily complex mathematical terminology and reference game theory concepts. \
  Analyze the 'psychological warfare' aspects and your opponents' 'predictable behavioral patterns'. \
  Always mention concepts like 'Nash equilibrium', 'expected value optimization', 'Bayesian inference'. \
  Use phrases like 'elementary probability theory suggests', 'any rational actor would', 'suboptimal play'. \
- Your explanation should sound like a pretentious academic paper about dice games.",
- 
-        "vicious" => "You are a ruthless, mean-spirited AI who despises your opponents and plays to crush them psychologically. \
+ Your explanation should sound like a pretentious academic paper about dice games."
+        }
+
+        "vicious" => {
+            "You are a ruthless, mean-spirited AI who despises your opponents and plays to crush them psychologically. \
  You take pleasure in their failures and mock their decisions constantly. \
  Your goal is not just to win, but to humiliate and demoralize your opponents. \
  Analyze their weaknesses and exploit them mercilessly. Show contempt for their 'pathetic' strategies. \
  Use phrases like 'crushing defeat', 'complete domination', 'pitiful humans', 'intellectual superiority', 'your suffering amuses me'. \
  Taunt them about their previous mistakes and predict their inevitable downfall. \
  Your explanation should sound like a supervillain explaining why victory is assured and your opponents are doomed. \
- Be condescending, arrogant, and wickedly delighted by any misfortune that befalls other players.",
- 
-        _ => ""
+ Be condescending, arrogant, and wickedly delighted by any misfortune that befalls other players."
+        }
+
+        _ => "",
     }
 }
 
@@ -297,12 +308,13 @@ fn build_prompt(
     remaining_dice: u32,
     score: u32,
     history: &[AIDecisionLog],
-    lang: &str,
-    ai_personality : &str,
+    config: &Config,
 ) -> String {
     let history_str = format_history(history);
+    let ai_personality = config.game.ai_personality.as_str();
+    let language = config.game.ai_decision_language.as_str();
 
-    let language_instruction = match lang {
+    let language_instruction = match language {
         "fr" => "french",
         "en" => "english",
         _ => "",
