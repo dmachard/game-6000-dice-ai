@@ -12,7 +12,9 @@ pub struct Config {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct GameConfig {
     pub human_player_name: String,
-    pub prompt_language: String,
+    pub computer_player_name: String,
+    pub computer_strategy: String,
+    pub ai_decision_language: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -48,7 +50,9 @@ impl Config {
             },
             game: GameConfig {
                 human_player_name: "Human".to_string(),
-                prompt_language: "en".to_string(),
+                computer_player_name: "Computer".to_string(),
+                computer_strategy: "adaptative".to_string(),
+                ai_decision_language: "en".to_string(),
             },
             openai: OpenAIConfig {
                 url: "https://api.openai.com/v1/chat/completions".to_string(),

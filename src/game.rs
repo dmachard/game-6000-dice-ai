@@ -1,4 +1,5 @@
 use crate::ai::ai_turn;
+use crate::computer::computer_turn;
 use crate::config::Config;
 use crate::human::human_turn;
 
@@ -7,6 +8,7 @@ use std::process::Command;
 
 const WINNING_SCORE: u32 = 6000;
 
+#[derive(Debug)]
 pub struct Player {
     pub name: String,
     pub score: u32,
@@ -14,8 +16,8 @@ pub struct Player {
     pub ai_type: Option<String>, // "openai" or "anthropic"
 }
 
-pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool, config: &Config) {
-    let mut players = setup_players(ai_player_count, has_openai, has_anthropic, config);
+pub fn start_game(has_openai: bool, has_anthropic: bool, config: &Config) {
+    let mut players = setup_players(has_openai, has_anthropic, config);
     let mut turn_number = 1;
 
     loop {
@@ -40,7 +42,11 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool, co
                     .map(|(_, p)| p.score)
                     .collect();
 
-                ai_turn(players[i].score, &other_scores, &players[i].ai_type, config)
+                if players[i].ai_type == Some("computer".to_string()) {
+                    computer_turn(players[i].score, &other_scores, config)
+                } else {
+                    ai_turn(players[i].score, &other_scores, &players[i].ai_type, config)
+                }
             };
 
             players[i].score += turn_score;
@@ -78,12 +84,7 @@ pub fn start_game(ai_player_count: u8, has_openai: bool, has_anthropic: bool, co
     }
 }
 
-pub fn setup_players(
-    player_count: u8,
-    has_openai: bool,
-    has_anthropic: bool,
-    config: &Config,
-) -> Vec<Player> {
+pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> Vec<Player> {
     let mut players = Vec::new();
 
     // Always add human player
@@ -94,53 +95,31 @@ pub fn setup_players(
         ai_type: None,
     });
 
-    // If no AI options are enabled, return only the human player
-    if !has_openai && !has_anthropic {
-        return players;
-    }
+    // Always add computer player
+    players.push(Player {
+        name: config.game.computer_player_name.clone(),
+        score: 0,
+        is_human: false,
+        ai_type: Some("computer".to_string()),
+    });
 
     // add ai players
-    match player_count {
-        2 => {
-            // 1 human + 1 IA
-            if has_openai {
-                players.push(Player {
-                    name: "AI (OpenAI)".to_string(),
-                    score: 0,
-                    is_human: false,
-                    ai_type: Some("openai".to_string()),
-                });
-            } else if has_anthropic {
-                players.push(Player {
-                    name: "AI (Claude)".to_string(),
-                    score: 0,
-                    is_human: false,
-                    ai_type: Some("anthropic".to_string()),
-                });
-            }
-        }
-        3 => {
-            // 1 human + 2 IA
-            players.push(Player {
-                name: "AI (OpenAI)".to_string(),
-                score: 0,
-                is_human: false,
-                ai_type: Some("openai".to_string()),
-            });
-            players.push(Player {
-                name: "AI (Claude)".to_string(),
-                score: 0,
-                is_human: false,
-                ai_type: Some("anthropic".to_string()),
-            });
-        }
-        _ => {
-            println!(
-                "Info: Unsupported player count ({}). Only human player will be added.",
-                player_count
-            );
-            // No AI added
-        }
+    if has_openai {
+        players.push(Player {
+            name: "AI (OpenAI)".to_string(),
+            score: 0,
+            is_human: false,
+            ai_type: Some("openai".to_string()),
+        });
+    }
+
+    if has_anthropic {
+        players.push(Player {
+            name: "AI (Claude)".to_string(),
+            score: 0,
+            is_human: false,
+            ai_type: Some("anthropic".to_string()),
+        });
     }
 
     players

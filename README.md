@@ -1,12 +1,10 @@
 # 🎲 6000 Dice Game
 
-A simple CLI dice game where a human competes against AI to reach 6000 points.
+A fun experiment to see how "super intelligent" AIs perform at a simple dice game.
 
-## ✨ Features
+## 🎯 The Concept
 
-- Roll 6 dice and collect points based on combinations
-- Human vs tho AIs
-- Play against two powerful AIs: OpenAI GPT-4 and Claude 4 by Anthropic
+A dice game where humans face off against expensive AIs in an epic battle to reach 6000 points. Watch GPT-4 and Claude 4 over-analyze every dice roll...
 
 ## 🧠 Rules Summary
 
@@ -27,9 +25,9 @@ Below are some screenshots of the game in action:
 ![AI Turn](screenshots/cli_gameplay_ai_v0.png)
 ![AI Turn](screenshots/cli_human_win.png)
 
-## 🔧 Setup
+## 🔧 Setup (optional)
 
-You must provide at least one valid API key to enable AI gameplay.
+You may provide at least one valid API key to enable AI/LLM gameplay.
 
 To use OpenAI's GPT-4, set your API key:
 

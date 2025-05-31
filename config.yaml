@@ -1,7 +1,9 @@
 # 6000 Dice Game Configuration
 game:
   human_player_name: "Human"
-  prompt_language: "fr"
+  computer_player_name: "Computer"
+  computer_strategy: "adaptive" # Options: "conservative", "balanced", "aggressive", "adaptive"
+  ai_decision_language: "fr"
 
 # Server Configuration
 server:

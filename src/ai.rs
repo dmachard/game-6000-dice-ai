@@ -58,7 +58,7 @@ pub fn ai_turn(
             remaining_dice,
             score,
             &history,
-            config.game.prompt_language.as_str(),
+            config.game.ai_decision_language.as_str(),
         );
         let (decision, explanation) = match ai_type {
             Some(ai_type_str) => match ai_type_str.as_str() {
