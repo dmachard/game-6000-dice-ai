@@ -4,7 +4,7 @@ A fun experiment to see how "super intelligent" AIs perform at a simple dice gam
 
 ## 🎯 The Concept
 
-A dice game where humans face off against expensive AIs in an epic battle to reach 6000 points. Watch GPT-4 and Claude 4 over-analyze every dice roll...
+A dice game where humans face off against expensive AIs in an epic battle to reach 6000 points. Watch them **over-analyze every single roll...**,
 
 ## 🧠 Rules Summary
 
@@ -48,3 +48,10 @@ You can configure one or both. The game will use the corresponding AI(s) based o
 ```bash
 cargo run play
 ```
+
+## 🧠 AI Personalities
+
+To make things even more entertaining, each AI can be assigned a unique personality:
+
+```yaml
+ai_personality: "vicious" # Options: "default", "paranoid", "academic", "vicious"

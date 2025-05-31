@@ -15,6 +15,7 @@ pub struct GameConfig {
     pub computer_player_name: String,
     pub computer_strategy: String,
     pub ai_decision_language: String,
+    pub ai_personality: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -53,6 +54,7 @@ impl Config {
                 computer_player_name: "Computer".to_string(),
                 computer_strategy: "adaptative".to_string(),
                 ai_decision_language: "en".to_string(),
+                ai_personality: "default".to_string(),
             },
             openai: OpenAIConfig {
                 url: "https://api.openai.com/v1/chat/completions".to_string(),

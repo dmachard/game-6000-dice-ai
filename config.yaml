@@ -4,6 +4,7 @@ game:
   computer_player_name: "Computer"
   computer_strategy: "adaptive" # Options: "conservative", "balanced", "aggressive", "adaptive"
   ai_decision_language: "fr"
+  ai_personality: "vicious" # Options: "default", "paranoid", "academic", "vicious"
 
 # Server Configuration
 server:
