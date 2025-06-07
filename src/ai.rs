@@ -3,8 +3,10 @@ use crate::score::{calculate_score, roll_dice};
 
 use colored::*;
 use reqwest::blocking::Client;
+use reqwest::blocking::ClientBuilder;
 use serde_json::json;
 use std::env;
+use std::time::Duration;
 use textwrap::wrap;
 
 const NUM_DICE: usize = 6;
@@ -65,6 +67,7 @@ pub fn ai_turn(
             Some(ai_type_str) => match ai_type_str.as_str() {
                 "openai" => ai_decision_with_chatgpt(&prompt, config),
                 "anthropic" => ai_decision_with_claude(&prompt, config),
+                "ollama" => ai_decision_with_ollama(&prompt, config),
                 _ => ai_decision_with_claude(&prompt, config), // Fallback to Claude
             },
             None => ai_decision_with_claude(&prompt, config), // Default fallback
@@ -120,6 +123,7 @@ fn display_ai_failure_reaction(
         Some(ai_type_str) => match ai_type_str.as_str() {
             "openai" => get_ai_reaction_chatgpt(&reaction_prompt, config),
             "anthropic" => get_ai_reaction_claude(&reaction_prompt, config),
+            "ollama" => get_ai_reaction_ollama(&reaction_prompt, config),
             _ => get_ai_reaction_claude(&reaction_prompt, config),
         },
         None => get_ai_reaction_claude(&reaction_prompt, config),
@@ -166,7 +170,7 @@ fn build_failure_reaction_prompt(
         \n\
         React to this loss in character. Keep your response to 2-3 sentences maximum. \
         Show emotion appropriate to your personality. \
-        Respond in plain text, not JSON.",
+        Respond in plain text, not JSON",
         lost_points, personality_context, history_summary
     )
 }
@@ -246,6 +250,48 @@ fn get_ai_reaction_claude(prompt: &str, config: &Config) -> String {
     }
 }
 
+fn get_ai_reaction_ollama(prompt: &str, config: &Config) -> String {
+    let client = ClientBuilder::new()
+        .timeout(Duration::from_secs(60))
+        .build()
+        .expect("Failed to build HTTP client with timeout");
+
+    let language = config.game.ai_output_language.as_str();
+
+    let language_instruction = match language {
+        "fr" => "french",
+        "en" => "english",
+        _ => "",
+    };
+
+    let request_body = json!({
+        "model": config.ollama.model,
+        "prompt": format!(
+            "You are an AI that just lost all your turn points in a dice game. React emotionally and briefly in {}.\n\n{}",
+            language_instruction, prompt
+        ),
+        "temperature": 0.9,
+        "max_tokens": 100,
+        "stream": false
+    });
+
+    match client
+        .post(config.ollama.url.clone())
+        .json(&request_body)
+        .send()
+    {
+        Ok(resp) => match resp.json::<serde_json::Value>() {
+            Ok(json_resp) => json_resp["response"]
+                .as_str()
+                .unwrap_or("💀 My circuits are sobbing in silence! 💀")
+                .trim()
+                .to_string(),
+            Err(_) => "💀 Emotional overload! I can't even parse my own pain. 💀".to_string(),
+        },
+        Err(_) => "💀 I failed to connect, just like I failed that turn! 💀".to_string(),
+    }
+}
+
 fn format_history(history: &[AIDecisionLog]) -> String {
     if history.is_empty() {
         return String::from("No prior AI decisions.");
@@ -312,7 +358,7 @@ fn build_prompt(
 ) -> String {
     let history_str = format_history(history);
     let ai_personality = config.game.ai_personality.as_str();
-    let language = config.game.ai_decision_language.as_str();
+    let language = config.game.ai_output_language.as_str();
 
     let language_instruction = match language {
         "fr" => "french",
@@ -372,8 +418,14 @@ fn build_prompt(
         \n\
         Don't mention combinations not present in the roll. Be rigorous.\n\
         \n\
-        Respond with valid JSON only and always provide an explanation in {language_instruction}. Do not include literal \\n characters or line breaks in strings. \n\
+        Respond with valid JSON only and you MUST provide an explanation in {language_instruction}. Do not include literal \\n characters or line breaks in strings. \n\
         Use spaces instead of line breaks in your explanation.\n\
+        \n\
+        Respond ONLY with a valid JSON object with keys 'decision' and 'explanation'.\n\
+        The 'decision' JSON key should be either 'R' (roll again) or 'T' (take points).\n\
+        The 'explanation' JSON key must be in English and your explanation in {language_instruction}.\n\
+        No commentary, no prefix, no prose.\n\
+        \n\
         {{\n\
           \"decision\": \"R\",  // \"R\" = roll again, \"T\" = take points\n\
           \"explanation\": \"Provide a detailed strategic analysis of your decision, including probability calculations, risk assessment, and psychological considerations about your opponents\"\n\
@@ -453,4 +505,63 @@ fn ai_decision_with_claude(prompt: &str, config: &Config) -> (String, String) {
         parsed["decision"].as_str().unwrap_or("T").to_string(),
         parsed["explanation"].as_str().unwrap_or("").to_string(),
     )
+}
+
+fn ai_decision_with_ollama(prompt: &str, config: &Config) -> (String, String) {
+    let client = ClientBuilder::new()
+        .timeout(Duration::from_secs(config.ollama.timeout.unwrap_or(60))) // Default to 60 seconds if not set
+        .build()
+        .expect("Failed to build HTTP client with timeout");
+
+    let request_body = json!({
+        "model": config.ollama.model.to_string(),
+        "prompt": format!(
+            "{}",
+            prompt
+        ),
+        "temperature": 0.7,
+        "stream": false
+    });
+
+    let resp = client
+        .post(config.ollama.url.clone())
+        .json(&request_body)
+        .send()
+        .expect("Request failed");
+
+    let json_resp: serde_json::Value = resp.json().expect("Invalid JSON");
+
+    // Clean and parse AI's JSON response
+    let content = &json_resp["response"];
+    let content_str = content.as_str().unwrap_or("");
+
+    // Remove escaped newlines and clean the JSON string
+    let cleaned_content = content_str
+        .replace("\\n", " ")
+        .replace("\n", " ")
+        .trim()
+        .to_string();
+
+    let decision = if cleaned_content.contains("\"decision\": \"T\"") {
+        "T"
+    } else if cleaned_content.contains("\"decision\": \"R\"") {
+        "R"
+    } else {
+        "AI decision malformed"
+    }
+    .to_string();
+
+    let explanation = if let Some(start) = cleaned_content.find("\"explanation\": \"") {
+        let after_key = &cleaned_content[start + 16..];
+        // Find the end quote, but handle case where closing brace might be missing
+        if let Some(quote_end) = after_key.rfind("\"") {
+            after_key[..quote_end].to_string()
+        } else {
+            after_key.to_string()
+        }
+    } else {
+        "AI response was malformed".to_string()
+    };
+
+    (decision, explanation)
 }

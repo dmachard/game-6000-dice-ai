@@ -122,6 +122,15 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
         });
     }
 
+    if config.ollama.enabled {
+        players.push(Player {
+            name: "AI (Ollama)".to_string(),
+            score: 0,
+            is_human: false,
+            ai_type: Some("ollama".to_string()),
+        });
+    }
+
     players
 }
 

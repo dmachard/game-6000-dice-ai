@@ -25,7 +25,7 @@ Below are some screenshots of the game in action:
 ![AI Turn](screenshots/cli_gameplay_ai_v0.png)
 ![AI Turn](screenshots/cli_human_win.png)
 
-## 🔧 Setup (optional)
+## 🔧 Setup IA (optional)
 
 You may provide at least one valid API key to enable AI/LLM gameplay.
 
@@ -41,7 +41,9 @@ To use Anthropic Claude 4, set your API key:
 export ANTHROPIC_API_KEY=your_key_here
 ```
 
-You can configure one or both. The game will use the corresponding AI(s) based on the keys provided.
+
+To use Ollama, update the `config.yaml` file to set the model to use
+
 
 ## 🚀 Start game
 
