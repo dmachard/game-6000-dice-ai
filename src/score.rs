@@ -19,45 +19,63 @@ pub fn roll_dice(n: usize) -> Vec<u8> {
 ///
 /// Remaining dice are those that did not contribute to the score.
 /// If no scoring dice, score is 0 and all dice remain.
-pub fn calculate_score(dice: &[u8]) -> (u32, u32) {
+pub fn calculate_score(dice: &[u8]) -> (u32, u32, Vec<u8>) {
     let mut counts: [u32; 7] = [0; 7];
     for &d in dice {
         counts[d as usize] += 1;
     }
 
     let mut score = 0;
+    let mut remaining_counts = counts.clone();
 
     if counts[1..=6] == [1, 1, 1, 1, 1, 1] {
-        return (2000, 0); // Straight
+        return (2000, 0, Vec::new()); // Straight, all dice used
     }
 
     if counts.iter().filter(|&&c| c == 2).count() == 3 {
-        return (1500, 0); // Three pairs
+        return (1500, 0, Vec::new()); // Three pairs, all dice used
     }
 
     for (i, &count) in counts.iter().enumerate().skip(1) {
         if count == 6 {
-            return ((i as u32) * 1000, 0);
+            return ((i as u32) * 1000, 0, Vec::new()); // Six of a kind, all dice used
         }
     }
 
-    for (i, count) in counts.iter_mut().enumerate().skip(2) {
+    // Handle three of a kind for 2-6
+    for (i, count) in remaining_counts.iter_mut().enumerate().skip(2) {
         if *count >= 3 {
             score += (i as u32) * 100;
             *count -= 3;
         }
     }
-
-    if counts[1] == 3 {
+    
+    // Handle three 1s (special case: 1000 points)
+    if remaining_counts[1] >= 3 {
         score += 1000;
-        counts[1] = 0;
+        remaining_counts[1] -= 3;
     }
-
-    score += (counts[1].min(2)) * 100;
-    counts[1] = counts[1].saturating_sub(2);
-    score += (counts[5].min(2)) * 50;
-    counts[5] = counts[5].saturating_sub(2);
-
-    let remaining_dice = counts.iter().skip(1).sum::<u32>();
-    (score, remaining_dice)
+    
+    // Handle remaining 1s (100 points each)
+    let remaining_ones = remaining_counts[1].min(2);
+    score += remaining_ones * 100;
+    remaining_counts[1] -= remaining_ones;
+    
+    // Handle remaining 5s (50 points each)
+    let remaining_fives = remaining_counts[5].min(2);
+    score += remaining_fives * 50;
+    remaining_counts[5] -= remaining_fives;
+    
+    // Calculate total remaining dice count
+    let remaining_dice_count = remaining_counts.iter().skip(1).sum::<u32>();
+    
+    // Build the vector of remaining dice values
+    let mut remaining_dice_values = Vec::new();
+    for (face_value, &count) in remaining_counts.iter().enumerate().skip(1) {
+        for _ in 0..count {
+            remaining_dice_values.push(face_value as u8);
+        }
+    }
+    
+    (score, remaining_dice_count, remaining_dice_values)
 }

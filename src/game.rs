@@ -2,19 +2,13 @@ use crate::ai::ai_turn;
 use crate::computer::computer_turn;
 use crate::config::Config;
 use crate::human::human_turn;
+use crate::api::models::{Player};
 
 use colored::Colorize;
 use std::process::Command;
 
 const WINNING_SCORE: u32 = 6000;
 
-#[derive(Debug)]
-pub struct Player {
-    pub name: String,
-    pub score: u32,
-    pub is_human: bool,
-    pub ai_type: Option<String>, // "openai" or "anthropic"
-}
 
 pub fn start_game(has_openai: bool, has_anthropic: bool, config: &Config) {
     let mut players = setup_players(has_openai, has_anthropic, config);
@@ -93,6 +87,8 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
         score: 0,
         is_human: true,
         ai_type: None,
+        turn_score: 0,
+        roll_score: 0,
     });
 
     // Always add computer player
@@ -101,6 +97,8 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
         score: 0,
         is_human: false,
         ai_type: Some("computer".to_string()),
+        turn_score: 0,
+        roll_score: 0,
     });
 
     // add ai players
@@ -110,6 +108,8 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
             score: 0,
             is_human: false,
             ai_type: Some("openai".to_string()),
+            turn_score: 0,
+            roll_score: 0,
         });
     }
 
@@ -119,6 +119,8 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
             score: 0,
             is_human: false,
             ai_type: Some("anthropic".to_string()),
+            turn_score: 0,
+            roll_score: 0,
         });
     }
 
@@ -128,6 +130,8 @@ pub fn setup_players(has_openai: bool, has_anthropic: bool, config: &Config) -> 
             score: 0,
             is_human: false,
             ai_type: Some("ollama".to_string()),
+            turn_score: 0,
+            roll_score: 0,
         });
     }
 

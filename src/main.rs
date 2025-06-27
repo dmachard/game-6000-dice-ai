@@ -3,6 +3,14 @@ use std::env;
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 
+use axum::{Router, http::StatusCode, response::Html};
+use tower::ServiceBuilder;
+use tower_http::{
+    services::ServeDir,
+    cors::CorsLayer,
+};
+use std::sync::Arc;
+
 use dice6000::api;
 use dice6000::config::Config;
 use dice6000::game::start_game;
@@ -51,24 +59,6 @@ fn main() {
     let openai_key = env::var("OPENAI_API_KEY").is_ok();
     let anthropic_key = env::var("ANTHROPIC_API_KEY").is_ok();
 
-    // if !openai_key && !anthropic_key {
-    //     println!(
-    //         "{}",
-    //         "Error: Neither OPENAI_API_KEY nor ANTHROPIC_API_KEY environment variables are set."
-    //             .bold()
-    //             .red()
-    //     );
-    //     println!(
-    //         "{}",
-    //         "Please set at least one API key before running the game:"
-    //             .bold()
-    //             .yellow()
-    //     );
-    //     println!("  export OPENAI_API_KEY=your_openai_key");
-    //     println!("  export ANTHROPIC_API_KEY=your_anthropic_key");
-    //     return;
-    // }
-
     if command_args.is_empty() {
         print_usage(&args[0]);
         return;
@@ -103,7 +93,19 @@ async fn run_server_async(config: &Config) {
 }
 
 async fn run_api_server(config: &Config) {
-    let app = api::create_router();
+    // Create the main router
+    let app = Router::new()
+        // API routes
+        .merge(api::routes::create_router(Arc::new(config.clone())))
+        // Serve static files from web/static directory
+        .nest_service("/static", ServeDir::new("src/web/static"))
+        // Serve index.html at root
+        .route("/", axum::routing::get(serve_index))
+        // Add CORS middleware
+        .layer(
+            ServiceBuilder::new()
+                .layer(CorsLayer::permissive())
+        );
 
     let addr = format!("{}:{}", config.server.host, config.server.port);
     let socket_addr: SocketAddr = addr.parse().expect("Invalid IP or port in config");
@@ -111,6 +113,13 @@ async fn run_api_server(config: &Config) {
     println!("Starting API server on http://{}", socket_addr);
     let listener = TcpListener::bind(socket_addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn serve_index() -> Result<Html<String>, StatusCode> {
+    match tokio::fs::read_to_string("src/web/static/index.html").await {
+        Ok(content) => Ok(Html(content)),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
 }
 
 fn print_usage(program_name: &str) {

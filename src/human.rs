@@ -15,7 +15,7 @@ pub fn human_turn() -> u32 {
         let roll = roll_dice(dice);
         println!("{} {:?}", "\tYou rolled:".bold().green(), roll);
 
-        let (score, remaining_dice) = calculate_score(&roll);
+        let (score, remaining_dice, remaining_dice_values) = calculate_score(&roll);
         println!("{} +{}", "\tScore:".bold().cyan(), score);
 
         if score == 0 {
@@ -40,7 +40,7 @@ pub fn human_turn() -> u32 {
             continue;
         }
 
-        println!("{} {}", "\tRemaining dice:".bold().blue(), remaining_dice);
+        println!("{} {} - {:?}", "\tRemaining dice:".bold().blue(), remaining_dice, remaining_dice_values);
         print!("{}", "\t(T)ake points or (R)oll again? ".bold().white());
         io::stdout().flush().unwrap();
 

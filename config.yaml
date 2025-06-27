@@ -19,7 +19,7 @@ anthropic:
   model: "claude-opus-4-20250514"
 
 ollama:
-  enabled: true
+  enabled: false
   url: "http://localhost:11434/api/generate"
   model: "llama3:latest"
   timeout: 120

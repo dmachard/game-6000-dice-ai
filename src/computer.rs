@@ -42,7 +42,7 @@ pub fn computer_turn(current_score: u32, other_scores: &[u32], config: &Config) 
         let roll = roll_dice(dice);
         println!("{} {:?}", "\tComputer rolled:".bold().green(), roll);
 
-        let (score, remaining_dice) = calculate_score(&roll);
+        let (score, remaining_dice, remaining_dice_values) = calculate_score(&roll);
         println!("{} +{}", "\tScore:".bold().cyan(), score);
 
         if score == 0 {
@@ -66,7 +66,7 @@ pub fn computer_turn(current_score: u32, other_scores: &[u32], config: &Config) 
             continue;
         }
 
-        println!("{} {}", "\tRemaining dice:".bold().blue(), remaining_dice);
+        println!("{} {} - {:?}", "\tRemaining dice:".bold().blue(), remaining_dice, remaining_dice_values);
 
         // Enhanced AI decision making with context
         let roll_u32: Vec<u32> = roll.iter().map(|&x| x as u32).collect();
