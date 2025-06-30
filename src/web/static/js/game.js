@@ -7,16 +7,17 @@ const translations = {
         roll: 'Lancé',
         rollBtn: 'Lancer les dés',
         bankBtn: 'Sécuriser les points',
+        nextBtn: 'Joueur suivant',
         newGameBtn: 'Nouveau Jeu',
         newGameStart: 'Cliquez sur "Nouveau Jeu" pour commencer !',
-        yourTurn: 'À votre tour ! Lancez les dés pour commencer.',
+        yourTurn: 'Lancez les dés pour commencer.',
         aiThinking: 'L\'IA réfléchit... 🤔',
         youRolled: 'Vous avez lancé',
         selectDice: 'Les dés qui rapportent des points sont sélectionnés automatiquement',
         youWon: 'Vous avez gagné',
         points: 'points',
         rulesTitle: '📋 Règles du jeu 6000',
-        bust: 'fait un bide ! Aucun point marqué.',
+        bust: 'Tous les points sont perdu!',
         banks: 'sécurise',
         decides: 'décide de continuer...',
         scores: 'marque',
@@ -36,9 +37,10 @@ const translations = {
         roll: 'Roll',
         rollBtn: 'Roll Dice',
         bankBtn: 'Bank Points',
+        nextBtn: 'Next Player',
         newGameBtn: 'New Game',
         newGameStart: 'Click "New Game" to start!',
-        yourTurn: 'Your turn! Roll the dice to begin.',
+        yourTurn: 'Roll the dice to begin.',
         aiThinking: 'AI is thinking... 🤔',
         youRolled: 'You rolled',
         selectDice: 'Scoring dice are automatically selected',
@@ -63,63 +65,158 @@ const translations = {
 let currentLanguage = 'fr';
 let gameState = null;
 let currentGameId = null;
+let aiPollingInterval = null;
+let aiPollingTimeout = null;
 
-// Language functions
-function setLanguage(lang) {
-    currentLanguage = lang;
-    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-    event.target.classList.add('active');
-    updateLanguage();
+function toggleRules() {
+    const list = document.getElementById("rules-list");
+    const indicator = document.getElementById("toggle-indicator");
+    const isVisible = list.style.display === "block";
+
+    list.style.display = isVisible ? "none" : "block";
+    indicator.textContent = isVisible ? "[+]" : "[-]";
 }
 
-function updateLanguage() {
-    const t = translations[currentLanguage];
-    document.getElementById('main-title').textContent = t.title;
-    document.getElementById('roll-text').textContent = t.rollBtn;
-    document.getElementById('bank-text').textContent = t.bankBtn;
-    document.getElementById('new-game-text').textContent = t.newGameBtn;
-    document.getElementById('rules-title').textContent = t.rulesTitle;
-    
-    // Update game info if no game is active
+// Affichage générique de l'état du jeu
+function renderGameState() {
+
+    const rollBtn = document.getElementById('roll-btn');
+    const bankBtn = document.getElementById('bank-btn');
+    const nextBtn = document.getElementById('next-player-btn');
+
     if (!gameState) {
-        document.getElementById('game-info').textContent = t.newGameStart;
+        rollBtn.disabled = true;
+        bankBtn.disabled = true;
+        nextBtn.disabled = true;
+        return;
     }
-    
-    // Update player names if game is active
-    if (gameState) {
-        updateScoreDisplay();
+
+    const t = translations[currentLanguage];
+    const scoresContainer = document.getElementById('game-scores');
+    scoresContainer.innerHTML = '';
+    gameState.game_state.players.forEach((player, index) => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'player-score';
+        playerDiv.id = `player-${index}-score`;
+        let playerName = player.name;
+        if (player.is_human) playerName = t.you;
+        if (index === gameState.current_player_index) playerDiv.classList.add('current-player');
+        playerDiv.innerHTML = `
+            <div class="player-name">${playerName}</div>
+            <div class="total-score">${player.score}</div>
+            <div class="turn-score">${t.turn}: ${player.turn_score ?? 0}</div>
+            <div class="roll-score">${t.roll}: ${player.roll_score ?? 0}</div>
+        `;
+        scoresContainer.appendChild(playerDiv);
+    });
+
+    // Dés
+    const diceContainer = document.getElementById('dice-container');
+    diceContainer.innerHTML = '';
+    // Correction : on utilise gameState.rerollable_dice pour colorer en ROUGE (non-scorant), sinon VERT (scorant)
+    if (gameState.game_state.dice && Array.isArray(gameState.game_state.dice) && gameState.game_state.dice.length > 0) {
+        // Si rerollable_dice n'est pas défini ou vide, tous les dés sont scorants
+        const rerollable = Array.isArray(gameState.game_state.rerollable_dice) ? gameState.game_state.rerollable_dice : [];
+        gameState.game_state.dice.forEach((die, i) => {
+            const dieDiv = document.createElement('div');
+            // Correction : si rerollable_dice est vide, tous verts
+            if (!gameState.game_state.rerollable_dice || gameState.game_state.rerollable_dice.length === 0) {
+                dieDiv.className = 'die scoring-die'; // tous scorants = vert
+            } else if (gameState.game_state.rerollable_dice.includes(i)) {
+                dieDiv.className = 'die non-scoring'; // non scorant = rouge
+            } else {
+                dieDiv.className = 'die scoring-die'; // scorant = vert
+            }
+            dieDiv.textContent = die;
+            diceContainer.appendChild(dieDiv);
+        });
+    }
+    // Message générique
+    let msg = '';
+    const currentPlayer = gameState.game_state.players[gameState.game_state.current_player_index];
+
+    // Nouvelle logique d'activation des boutons
+    const turnEndReason = gameState.game_state.turn_end_reason;
+    if (turnEndReason) {
+        rollBtn.disabled = true;
+        bankBtn.disabled = true;
+        nextBtn.disabled = false;
+    } else {
+        nextBtn.disabled = true;
+        if (currentPlayer.is_human) {
+            rollBtn.disabled = false;
+            bankBtn.disabled = false;
+            if (currentPlayer.turn_score == 0) {
+                bankBtn.disabled = true;
+            }
+        } else {
+            rollBtn.disabled = true;
+            bankBtn.disabled = true;
+        }
+    }
+
+    // Message générique
+    if (gameState.ai_decision && gameState.ai_explanation) {
+        msg = `${t.aiThinking}: ${gameState.ai_explanation}`;
+    } else if (turnEndReason === 'busted') {
+        msg = t.bust;
+    } else if (turnEndReason === 'banked') {
+        msg = `${currentPlayer.name} ${t.banks} ${currentPlayer.turn_score} ${t.points}.`;
+    } else if (typeof gameState.current_roll_score === 'number' && gameState.current_roll_score > 0) {
+        msg = `${currentPlayer.name} a gagné ${gameState.current_roll_score} points avec ce lancer.`;
+    } else {
+        msg = `${t.yourTurn}`;
+    }
+    document.getElementById('game-info').textContent = msg;
+}
+
+// Polling générique
+async function pollGameStatus() {
+    if (!currentGameId) return;
+    try {
+        const response = await fetch(`/api/game/${currentGameId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data && data.game_state) {
+            gameState = data;
+            renderGameState();
+        }
+        if (aiPollingTimeout) clearTimeout(aiPollingTimeout);
+        aiPollingTimeout = setTimeout(pollGameStatus, 3000);
+    } catch (error) {
+        console.error('Error polling game status:', error);
+        const t = translations[currentLanguage];
+        document.getElementById('game-info').textContent = `${t.error}: ${error.message}`;
     }
 }
 
-// API functions
+// Démarre le polling dès la création du jeu
 async function createGame() {
     try {
         const t = translations[currentLanguage];
         document.getElementById('game-info').textContent = t.creating;
-        disableControls(); // Désactive les boutons pendant la création
         const response = await fetch('/api/game', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                language: currentLanguage
-            })
+            body: JSON.stringify({ language: currentLanguage })
         });
-
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
         const data = await response.json();
         if (data.success && data.game_state) {
             gameState = data.game_state;
             currentGameId = data.game_state.id;
-            updateScoreDisplay();
-            updateGameInfo();
-            // Active le bouton lancer dès qu'une partie est créée
-            document.getElementById('roll-btn').disabled = false;
-            document.getElementById('bank-btn').disabled = true;
+            await pollGameStatus();
         } else {
             throw new Error(data.message || 'Failed to create game');
         }
@@ -130,200 +227,84 @@ async function createGame() {
     }
 }
 
-function updateScoreDisplay() {
-    if (!gameState) return;
+function setLanguage(lang) {
+    currentLanguage = lang;
+    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+   
     const t = translations[currentLanguage];
-    const scoresContainer = document.getElementById('game-scores');
-    scoresContainer.innerHTML = '';
-
-    gameState.players.forEach((player, index) => {
-        const playerDiv = document.createElement('div');
-        playerDiv.className = 'player-score';
-        playerDiv.id = `player-${index}-score`;
-        let playerName = player.name;
-        if (player.is_human) {
-            playerName = t.you;
-        } else if (player.ai_type === 'computer') {
-            playerName = t.computer;
-        } else if (player.ai_type === 'openai') {
-            playerName = t.aiOpenAI;
-        } else if (player.ai_type === 'anthropic') {
-            playerName = t.aiClaude;
-        } else if (player.ai_type === 'ollama') {
-            playerName = t.aiOllama;
-        }
-        if (index === gameState.current_player_index) {
-            playerDiv.classList.add('current-player');
-        }
-        playerDiv.innerHTML = `
-            <div class="player-name">${playerName}</div>
-            <div class="total-score">${player.score}</div>
-            <div class="turn-score">${t.turn}: ${player.turn_score ?? 0}</div>
-            <div class="roll-score">${t.roll}: ${player.roll_score ?? 0}</div>
-        `;
-        scoresContainer.appendChild(playerDiv);
-    });
-
-    // Affichage des dés si présents dans gameState
-    const diceContainer = document.getElementById('dice-container');
-    diceContainer.innerHTML = '';
-    if (gameState.dice && Array.isArray(gameState.dice)) {
-        gameState.dice.forEach((die, i) => {
-            const dieDiv = document.createElement('div');
-            // Dés non scorants (dans rerollable_dice) → rouge, scorants → vert
-            if (gameState.rerollable_dice && gameState.rerollable_dice.includes(i)) {
-                dieDiv.className = 'die scoring-die'; // non scorant = rouge
-            } else {
-                dieDiv.className = 'die rerollable-die'; // scorant = vert
-            }
-            dieDiv.textContent = die;
-            diceContainer.appendChild(dieDiv);
-        });
-    }
-    // Suppression de l'affichage du score du lancé sous les dés
-    const rollScoreDiv = document.getElementById('roll-score-info');
-    if (rollScoreDiv) {
-        rollScoreDiv.remove();
-    }
-}
-
-function updateGameInfo() {
-    if (!gameState) return;
-    const t = translations[currentLanguage];
-    const currentPlayer = gameState.players[gameState.current_player_index];
-    // Message spécial si bust
-    if (gameState.busted) {
-        document.getElementById('game-info').textContent = t.bust + ' → ' + t.yourTurn;
-        // Affiche le bouton "Joueur suivant"
-        showNextPlayerButton();
-        return;
-    }
-    // Cas spécial : début de partie, aucun dé lancé
-    if (!gameState.dice || gameState.dice.length === 0) {
-        if (currentPlayer.is_human) {
-            document.getElementById('game-info').textContent = t.yourTurn;
-        } else {
-            document.getElementById('game-info').textContent = `${currentPlayer.name} ${t.aiThinking}`;
-        }
-        return;
-    }
-    // Si on ne peut plus continuer (plus de dés à relancer OU can_continue faux)
-    if (!gameState.can_continue || (gameState.rerollable_dice && gameState.rerollable_dice.length === 0)) {
-        document.getElementById('game-info').textContent = 'Tour terminé, sécurisez vos points !';
-        document.getElementById('roll-btn').disabled = true;
-        return;
-    }
-    // Message après un lancer réussi
-    if (currentPlayer.is_human && typeof gameState.current_roll_score === 'number' && gameState.current_roll_score > 0) {
-        document.getElementById('game-info').textContent = `Vous avez gagné ${gameState.current_roll_score} points avec ce lancer.`;
-        return;
-    }
-    if (currentPlayer.is_human) {
-        document.getElementById('game-info').textContent = t.yourTurn;
-    } else {
-        document.getElementById('game-info').textContent = `${currentPlayer.name} ${t.aiThinking}`;
-    }
-}
-
-function showNextPlayerButton() {
-    let btn = document.getElementById('next-player-btn');
-    if (!btn) {
-        btn = document.createElement('button');
-        btn.id = 'next-player-btn';
-        btn.className = 'btn-secondary';
-        btn.textContent = 'Joueur suivant';
-        btn.onclick = async function() {
-            btn.disabled = true;
-            // On relance un roll pour le joueur suivant (ou appelle une route dédiée si besoin)
-            await rollDice();
-            btn.remove();
-        };
-        document.getElementById('controls').appendChild(btn);
-    } else {
-        btn.disabled = false;
-    }
-}
-
-function enableControls() {
-    if (!gameState) return;
-    const currentPlayer = gameState.players[gameState.current_player_index];
-    // Par défaut, tout est désactivé
-    document.getElementById('roll-btn').disabled = true;
-    document.getElementById('bank-btn').disabled = true;
-
-    // Si c'est au joueur humain de jouer
-    if (currentPlayer.is_human) {
-        // Si on peut continuer, on active les deux boutons
-        if (gameState.can_continue) {
-            document.getElementById('roll-btn').disabled = false;
-            document.getElementById('bank-btn').disabled = false;
-        } else {
-            // Début de tour ou après un bust, tout reste désactivé
-            document.getElementById('roll-btn').disabled = true;
-            document.getElementById('bank-btn').disabled = true;
-        }
-    }
-}
-
-// Au chargement, le bouton sécuriser doit être désactivé
-function disableControls() {
-    document.getElementById('roll-btn').disabled = true;
-    document.getElementById('bank-btn').disabled = true;
-}
-
-// Game functions
-async function newGame() {
-    gameState = null;
-    currentGameId = null;
-    document.getElementById('game-scores').innerHTML = '';
-    document.getElementById('dice-container').innerHTML = '';
-    disableControls();
+    document.getElementById('main-title').textContent = t.title;
+    document.getElementById('roll-text').textContent = t.rollBtn;
+    document.getElementById('bank-text').textContent = t.bankBtn;
+    document.getElementById('new-game-text').textContent = t.newGameBtn;
+    document.getElementById('next-player-text').textContent = t.nextBtn;
+    document.getElementById('rules-title').textContent = t.rulesTitle;
     
-    await createGame();
+    // Update game info if no game is active
+    if (!gameState) {
+        document.getElementById('game-info').textContent = t.newGameStart;
+    }
 }
 
+// Nouvelle fonction pour passer au joueur suivant via l'API
+async function nextPlayer() {
+    if (!currentGameId) return;
+    try {
+        const response = await fetch(`/api/game/${currentGameId}/next`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.success) {
+            gameState = data;
+            renderGameState();
+        } else {
+            throw new Error(data.message || 'Failed to go to next player');
+        }
+    } catch (error) {
+        console.error('Error next player:', error);
+        const t = translations[currentLanguage];
+        document.getElementById('game-info').textContent = `${t.error}: ${error.message}`;
+    }
+}
+
+// Appels d'API spécifiques au jeu
 async function rollDice() {
-    if (!gameState || !currentGameId) return;
+    if (!currentGameId) return;
     try {
         const response = await fetch(`/api/game/${currentGameId}/roll`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ player_id: null }) // Adapt if player_id is needed
+            body: JSON.stringify({}) // Ajoute un body JSON vide pour éviter l'erreur EOF
         });
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        let data;
+        let rawText = '';
+        try {
+            data = await response.json();
+        } catch (jsonErr) {
+            rawText = await response.text();
+            console.error('Failed to parse JSON from /roll:', jsonErr);
+            console.error('Raw response:', rawText);
+            throw new Error(`Invalid JSON from backend: ${rawText}`);
         }
-        const data = await response.json();
-        if (data && data.dice) {
-            // Update game state and UI
-            gameState.dice = data.dice;
-            gameState.rerollable_dice = data.rerollable_dice;
-            gameState.current_roll_score = data.roll_score;
-            gameState.current_turn_score = data.turn_score;
-            gameState.busted = data.busted;
-            gameState.can_continue = data.can_continue;
-            // Met à jour le score du joueur courant dans gameState.players
-            if (gameState.players && gameState.players[gameState.current_player_index]) {
-                gameState.players[gameState.current_player_index].turn_score = data.turn_score;
-                gameState.players[gameState.current_player_index].roll_score = data.roll_score;
-            }
-            updateScoreDisplay();
-            updateGameInfo();
-            enableControls();
-        } else if (data && data.busted) {
-            // Handle bust
-            gameState.busted = true;
-            gameState.current_turn_score = 0;
-            gameState.current_roll_score = 0;
-            if (gameState.players && gameState.players[gameState.current_player_index]) {
-                gameState.players[gameState.current_player_index].turn_score = 0;
-                gameState.players[gameState.current_player_index].roll_score = 0;
-            }
-            updateScoreDisplay();
-            updateGameInfo();
-            enableControls();
+        if (!response.ok) {
+            console.error('Backend error response:', data);
+            throw new Error(`HTTP error! status: ${response.status} - ${data.message || JSON.stringify(data)}`);
+        }
+        if (data.success && data.game_state) {
+            await pollGameStatus();
+        } else {
+            console.error('Unexpected /roll response:', data);
+            const t = translations[currentLanguage];
+            document.getElementById('game-info').textContent = `${t.error}: ${data.message || JSON.stringify(data)}`;
+            throw new Error(data.message || JSON.stringify(data) || 'Failed to roll dice');
         }
     } catch (error) {
         console.error('Error rolling dice:', error);
@@ -333,20 +314,26 @@ async function rollDice() {
 }
 
 async function bankPoints() {
-    if (!gameState || !currentGameId) return;
-    
+    if (!currentGameId) return;
     try {
-        // Placeholder for bank points API call
-        console.log('Banking points...');
-        // TODO: Implement bank points API call
-        
+        const response = await fetch(`/api/game/${currentGameId}/bank`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.success && data.game_state) {
+            await pollGameStatus();
+        } else {
+            throw new Error(data.message || 'Failed to bank points');
+        }
     } catch (error) {
         console.error('Error banking points:', error);
+        const t = translations[currentLanguage];
+        document.getElementById('game-info').textContent = `${t.error}: ${error.message}`;
     }
 }
-
-// Initialize the game on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateLanguage();
-    disableControls();
-});

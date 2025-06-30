@@ -36,7 +36,7 @@ pub fn ai_turn(
         let roll = roll_dice(dice);
         println!("{} {:?}", "\tAI rolled:".bold().green(), roll);
 
-        let (score, remaining_dice, remaining_dice_values) = calculate_score(&roll);
+        let (score, remaining_dice, remaining_dice_values, _rerollable_dice) = calculate_score(&roll);
         println!("{} {}", "\tScore:".bold().cyan(), score);
         println!("{} {} - {:?}", "\tRemaining dice:".bold().blue(), remaining_dice, remaining_dice_values);
 

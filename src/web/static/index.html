@@ -36,14 +36,19 @@
             <button class="btn-secondary" id="bank-btn" onclick="bankPoints()" disabled>
                 <span id="bank-text">Sécuriser les points</span>
             </button>
+            <button class="btn-secondary" id="next-player-btn" onclick="nextPlayer()" disabled>
+                <span id="next-player-text">Joueur Suivant</span>
+            </button>
             <button class="btn-danger" id="new-game-btn" onclick="createGame()">
                 <span id="new-game-text">Nouveau Jeu</span>
             </button>
         </div>
 
         <div class="rules">
-            <h3 id="rules-title">📋 Règles du jeu 6000</h3>
-            <ul id="rules-list">
+            <h3 id="rules-title" onclick="toggleRules()" style="cursor: pointer;">
+                📋 Règles du jeu 6000 <span id="toggle-indicator">[+]</span>
+            </h3>
+            <ul id="rules-list" style="display: none;">
                 <li><strong>1</strong> = 100 points, <strong>5</strong> = 50 points</li>
                 <li><strong>Brelan :</strong> 3 dés identiques = valeur × 100 (sauf 3×1 = 1000 points)</li>
                 <li><strong>Suite :</strong> 1-2-3-4-5-6 = 1500 points</li>
@@ -54,6 +59,7 @@
                 <li>Premier à atteindre 6000 points gagne !</li>
             </ul>
         </div>
+
     </div>
 
     <script src="/static/js/game.js"></script>

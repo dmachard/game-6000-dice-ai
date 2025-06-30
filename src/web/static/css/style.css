@@ -135,24 +135,18 @@ h1 {
     transform: scale(1.1);
 }
 
+/* Dés scorants (verts) */
+.scoring-die {
+    background: #4CAF50;
+    color: white;
+    opacity: 0.85;
+}
+
+/* Dés non scorants (rouges) */
 .die.non-scoring {
     background: #f44336;
     color: white;
     opacity: 0.7;
-}
-
-/* Dés relançables (verts) */
-.rerollable-die {
-    background: #4CAF50;
-    color: white;
-    transform: scale(1.1);
-}
-
-/* Dés scorants (rouges) */
-.scoring-die {
-    background: #f44336;
-    color: white;
-    opacity: 0.85;
 }
 
 .controls {

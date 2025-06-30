@@ -15,7 +15,7 @@ pub fn human_turn() -> u32 {
         let roll = roll_dice(dice);
         println!("{} {:?}", "\tYou rolled:".bold().green(), roll);
 
-        let (score, remaining_dice, remaining_dice_values) = calculate_score(&roll);
+        let (score, remaining_dice, remaining_dice_values, _rerollable_dice) = calculate_score(&roll);
         println!("{} +{}", "\tScore:".bold().cyan(), score);
 
         if score == 0 {

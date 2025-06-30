@@ -3,23 +3,22 @@ use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::game;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub struct Status {
-    pub status: String,
-}
+#[derive(Deserialize, Serialize)]
+pub struct StatusQuery {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub id: String,
     pub players: Vec<Player>,
     pub current_player_index: usize,
-    // pub current_turn_score: u32,
-    // pub current_roll_score: u32,
     pub dice: Vec<u8>,
+    pub dice_count: usize,
     pub game_over: bool,
     pub winner: Option<String>,
     pub turn_number: u32,
-    pub dice_count: usize,
+   // pub turn_terminated: bool,
+    pub rerollable_dice: Vec<usize>,
+    pub turn_end_reason: Option<String>, // None =  in progress, Some("busted"), Some("banked"), Some("win"), etc.
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,16 +45,26 @@ pub struct RollDiceResponse {
     pub dice: Vec<u8>,
     pub roll_score: u32,
     pub turn_score: u32,
-    pub can_continue: bool,
     pub busted: bool,
     pub rerollable_dice: Vec<usize>,
     pub remaining_dice_values: Vec<u8>,
+    pub ai_decision: Option<String>,
+    pub ai_explanation: Option<String>,
+}
+
+
+#[derive(Debug, Serialize)]
+pub struct StatusFullResponse {
+    pub success: bool,
+    pub game_state: Option<GameState>,
+    pub ai_decision: Option<String>,
+    pub ai_explanation: Option<String>,
+    
 }
 
 #[derive(Debug, Serialize)]
 pub struct GameResponse {
     pub success: bool,
-    pub message: String,
     pub game_state: Option<GameState>,
 }
 
@@ -95,13 +104,13 @@ impl GameState {
                 )
                 .collect(),
             current_player_index: 0,
-            // current_turn_score: 0,
-            // current_roll_score: 0,
             dice: Vec::new(),
             game_over: false,
+            turn_terminated: false,
             winner: None,
             turn_number: 1,
             dice_count: 6,
+            rerollable_dice: Vec::new(),
         }
     }
 
@@ -115,12 +124,7 @@ impl GameState {
 
     pub fn next_player(&mut self) {
         self.current_player_index = (self.current_player_index + 1) % self.players.len();
-        if self.current_player_index == 0 {
-            self.turn_number += 1;
-        }
-        // self.current_turn_score = 0;
-        // self.current_roll_score = 0;
-        self.dice.clear();
+        self.turn_number += 1;
         self.dice_count = 6;
     }
 

@@ -2,7 +2,7 @@ use crate::api::handlers::{self, GameStore};
 use crate::config::Config;
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{post},
     middleware,
     http::HeaderValue,
     Extension,
@@ -18,7 +18,9 @@ pub fn create_router(config: Arc<Config>) -> Router {
     Router::new()
         .route("/api/game", post(handlers::create_game))
         .route("/api/game/{game_id}/roll", post(handlers::roll_dice_handler))
-        .route("/api/status", get(handlers::status_handler))
+        .route("/api/game/{game_id}/bank", post(handlers::bank_points_handler))
+        .route("/api/game/{game_id}/status", post(handlers::game_status_handler))
+        .route("/api/game/{game_id}/next", post(handlers::next_player_handler))
         .with_state(game_store)
         .layer(Extension(config))
         .layer(middleware::from_fn(cors_middleware))

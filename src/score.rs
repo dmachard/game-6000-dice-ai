@@ -19,7 +19,7 @@ pub fn roll_dice(n: usize) -> Vec<u8> {
 ///
 /// Remaining dice are those that did not contribute to the score.
 /// If no scoring dice, score is 0 and all dice remain.
-pub fn calculate_score(dice: &[u8]) -> (u32, u32, Vec<u8>) {
+pub fn calculate_score(dice: &[u8]) -> (u32, u32, Vec<u8>, Vec<usize>) {
     let mut counts: [u32; 7] = [0; 7];
     for &d in dice {
         counts[d as usize] += 1;
@@ -29,16 +29,16 @@ pub fn calculate_score(dice: &[u8]) -> (u32, u32, Vec<u8>) {
     let mut remaining_counts = counts.clone();
 
     if counts[1..=6] == [1, 1, 1, 1, 1, 1] {
-        return (2000, 0, Vec::new()); // Straight, all dice used
+        return (2000, 0, Vec::new(), Vec::new()); // Straight, all dice used
     }
 
     if counts.iter().filter(|&&c| c == 2).count() == 3 {
-        return (1500, 0, Vec::new()); // Three pairs, all dice used
+        return (1500, 0, Vec::new(), Vec::new()); // Three pairs, all dice used
     }
 
     for (i, &count) in counts.iter().enumerate().skip(1) {
         if count == 6 {
-            return ((i as u32) * 1000, 0, Vec::new()); // Six of a kind, all dice used
+            return ((i as u32) * 1000, 0, Vec::new(), Vec::new()); // Six of a kind, all dice used
         }
     }
 
@@ -69,13 +69,16 @@ pub fn calculate_score(dice: &[u8]) -> (u32, u32, Vec<u8>) {
     // Calculate total remaining dice count
     let remaining_dice_count = remaining_counts.iter().skip(1).sum::<u32>();
     
-    // Build the vector of remaining dice values
+    // Build the vector of remaining dice values and their indices in the original roll
     let mut remaining_dice_values = Vec::new();
-    for (face_value, &count) in remaining_counts.iter().enumerate().skip(1) {
-        for _ in 0..count {
-            remaining_dice_values.push(face_value as u8);
+    let mut remaining_indices = Vec::new();
+    let mut restants = remaining_counts.clone();
+    for (i, &die) in dice.iter().enumerate() {
+        if die > 0 && restants[die as usize] > 0 {
+            remaining_dice_values.push(die);
+            remaining_indices.push(i);
+            restants[die as usize] -= 1;
         }
     }
-    
-    (score, remaining_dice_count, remaining_dice_values)
+    (score, remaining_dice_count, remaining_dice_values, remaining_indices)
 }
